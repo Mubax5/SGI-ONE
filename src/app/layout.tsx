@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "@fontsource-variable/inter";
 import "./globals.css";
+import "./mobile-home.css";
 export const metadata: Metadata = {
   title: "SGI One | Sandika Global Indonesia",
   description:

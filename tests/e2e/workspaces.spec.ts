@@ -36,7 +36,7 @@ async function overflow(page: Page) {
   ).toBe(true);
   const offenders = await page
     .locator(
-      ".role-hero,.home-all-features .home-shortcut,.responsive-table,.cell-content,[role=dialog],.mobile-bottom-nav>a,.mobile-bottom-nav>button",
+      ".role-hero,.sgi-mobile-quick-action,.sgi-mobile-feature,.responsive-table,.cell-content,[role=dialog],.mobile-bottom-nav>a,.mobile-bottom-nav>button",
     )
     .evaluateAll((elements) =>
       elements
@@ -100,18 +100,18 @@ test("six genuine role dashboards, complete mobile menus and floating role actio
     const page = await context.newPage();
     try {
       await login(page, entry.role);
-      await expect(page.locator(".sgi-homepage")).toHaveAttribute(
+      await expect(page.locator(".sgi-mobile-home")).toHaveAttribute(
         "data-workspace-role",
         entry.role,
       );
       await expect(
         page
           .getByRole("main")
-          .getByRole("heading", { name: "SGI One · Homepage", exact: true }),
+          .getByRole("heading", { name: /^Halo,/ }),
       ).toBeVisible();
       // Each workspace renders a different set of real task sections.
       sections.push(
-        (await page.locator(".home-notice h2").allTextContents()).join("|"),
+        (await page.locator(".sgi-mobile-carousel-heading h2").allTextContents()).join("|"),
       );
       const nav = page.getByRole("navigation", {
         name: "Navigasi bawah",
@@ -134,27 +134,25 @@ test("six genuine role dashboards, complete mobile menus and floating role actio
         expect(bar.y + bar.height).toBeLessThan(844);
         expect(central.y).toBeLessThan(bar.y);
         await expect(page.locator(".sgi-sidebar")).toHaveCount(0);
-        const content = (await page.getByRole("main").boundingBox())!;
-        expect(content.y + content.height).toBeLessThanOrEqual(central.y - 6);
+        await expect(page.locator(".sgi-mobile-sheet")).toBeVisible();
         expect(
-          await page.locator(".home-all-features .home-shortcut").count(),
+          await page.locator(".sgi-mobile-feature").count(),
         ).toBeGreaterThan(1);
         expect(
-          await page.locator(".home-all-features .home-shortcut svg").count(),
-        ).toBe(await page.locator(".home-all-features .home-shortcut").count());
+          await page.locator(".sgi-mobile-feature > svg:first-child").count(),
+        ).toBe(await page.locator(".sgi-mobile-feature").count());
       }
       await page.setViewportSize({ width: 390, height: 844 });
-      await page.locator(".home-refresh button").click();
+      await page.getByRole("button", { name: "Perbarui ringkasan" }).click();
       await expect(page.locator(".loading-state")).toHaveCount(0);
-      const lastAction = (await page
-        .locator(".home-refresh button")
-        .boundingBox())!;
-      const scrollArea = (await page.getByRole("main").boundingBox())!;
-      expect(lastAction.y + lastAction.height).toBeLessThanOrEqual(
-        scrollArea.y + scrollArea.height + 1,
-      );
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      const footer = await page.locator(".sgi-mobile-footer-note").boundingBox();
+      const navBox = await nav.boundingBox();
+      expect(footer).not.toBeNull();
+      expect(navBox).not.toBeNull();
+      expect(footer!.y + footer!.height).toBeLessThan(navBox!.y);
       await page
-        .getByRole("heading", { name: "SGI One · Homepage", exact: true })
+        .getByRole("heading", { name: /^Halo,/ })
         .scrollIntoViewIfNeeded();
       await page.screenshot({
         path: `artifacts/screenshots/role-${entry.role}-mobile.png`,
@@ -173,7 +171,7 @@ test("six genuine role dashboards, complete mobile menus and floating role actio
       }
       for (const width of [640, 768, 1024, 1440]) {
         await page.setViewportSize({ width, height: 1000 });
-        await expect(page.locator(".sgi-homepage")).toHaveCount(0);
+        await expect(page.locator(".sgi-mobile-home")).toHaveCount(0);
         await expect(
           page.getByRole("complementary", {
             name: "Navigasi SGI",
@@ -304,18 +302,18 @@ test("homepage controls persist preferences and map coordinates use the real sco
     page.getByRole("complementary", { name: "Navigasi SGI", exact: true }),
   ).toHaveCount(0);
   await expect(page.locator(".topbar")).toHaveCount(0);
-  await expect(page.locator(".home-summary-grid>a")).toHaveCount(2);
-  await expect(page.locator(".home-status-grid>a")).toHaveCount(4);
+  await expect(page.locator(".sgi-mobile-slide")).toHaveCount(5);
+  await expect(page.locator(".sgi-mobile-activity-row")).toHaveCount(4);
   await page
-    .getByRole("button", { name: "Pemberitahuan pekerjaan", exact: true })
+    .getByRole("button", { name: "Lihat pemberitahuan", exact: true })
     .click();
   await expect(
     page.getByRole("dialog", { name: "Perlu perhatian", exact: true }),
   ).toContainText("Perlu review");
   await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: "Atur favorit", exact: true }).click();
+  await page.getByRole("button", { name: "Atur", exact: true }).click();
   const favorites = page.getByRole("dialog", {
-    name: "Menu favorit",
+    name: "Atur menu favorit",
     exact: true,
   });
   await favorites
@@ -329,23 +327,23 @@ test("homepage controls persist preferences and map coordinates use the real sco
   await expect(page.locator(".loading-state")).toHaveCount(0);
   await expect(
     page
-      .getByRole("navigation", { name: "Menu favorit", exact: true })
+      .locator(".sgi-mobile-tools-rail")
       .getByRole("link", { name: /^Absensi|^Absen/ }),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: "Tutup ringkasan perhatian", exact: true })
+    .getByRole("button", { name: "Sembunyikan informasi", exact: true })
     .click();
   await page.reload();
-  await expect(page.locator(".home-notice")).toHaveCount(0);
+  await expect(page.locator(".sgi-mobile-attention")).toHaveCount(0);
   await page
-    .getByRole("button", { name: "Pengaturan homepage dan akun", exact: true })
+    .getByRole("button", { name: "Pengaturan akun", exact: true })
     .click();
   await page
-    .getByRole("button", { name: "Tampilkan ringkasan perhatian", exact: true })
+    .getByRole("button", { name: "Tampilkan informasi perhatian", exact: true })
     .click();
-  await expect(page.locator(".home-notice")).toBeVisible();
+  await expect(page.locator(".sgi-mobile-attention")).toBeVisible();
   await page
-    .locator(".home-status-grid")
+    .locator(".sgi-mobile-activity-card")
     .getByRole("link", { name: /Berjalan/ })
     .click();
   await expect(page).toHaveURL(/status=in_progress/);
