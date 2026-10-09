@@ -1,0 +1,772 @@
+/*
+ * SGI One mobile application shell.
+ * Mobile-first, role-aware homepage inspired by a compact banking app layout.
+ * Kumo tokens drive surfaces and text. Only the requested SGI #D44400 hero
+ * uses a custom brand gradient. Keep these styles isolated from desktop.
+ */
+@media screen and (max-width: 639px) {
+  .app-shell .main-area.homepage-main {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+    padding-bottom: calc(105px + env(safe-area-inset-bottom));
+    background: var(--color-kumo-base);
+  }
+
+  .app-shell .page-content.homepage-content {
+    height: auto;
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow: visible;
+    padding: 0;
+    max-width: none;
+    scrollbar-width: auto;
+  }
+
+  .sgi-mobile-home {
+    width: 100%;
+    min-width: 0;
+    color: var(--text-color-kumo-default);
+    background: var(--color-kumo-base);
+  }
+
+  .sgi-mobile-home :is(h1, h2, h3, p) {
+    margin: 0;
+  }
+
+  .sgi-mobile-hero {
+    position: relative;
+    overflow: hidden;
+    padding: calc(22px + env(safe-area-inset-top)) 18px 43px;
+    background: linear-gradient(145deg, #d44400 0%, #b33207 52%, #8d2608 100%);
+    color: #fff;
+  }
+
+  .sgi-mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 42px;
+    margin-bottom: 20px;
+  }
+
+  .sgi-mobile-identity {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    gap: 10px;
+  }
+
+  .sgi-mobile-logo {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background: #fff;
+  }
+
+  .sgi-mobile-logo img {
+    display: block;
+    width: 23px;
+    height: 23px;
+    object-fit: contain;
+  }
+
+  .sgi-mobile-welcome {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 1px;
+    line-height: 1.2;
+  }
+
+  .sgi-mobile-welcome > span {
+    overflow: hidden;
+    color: rgb(255 255 255 / 76%);
+    font-size: 11px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .sgi-mobile-welcome h1 {
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.3;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+
+  .sgi-mobile-header-actions {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .sgi-mobile-header-actions button {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    min-height: 34px;
+    border: 0;
+    border-radius: 50%;
+    background: rgb(255 255 255 / 17%);
+    color: #fff;
+    box-shadow: none;
+  }
+
+  .sgi-mobile-search {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    height: 43px;
+    min-height: 43px;
+    border: 0;
+    border-radius: 23px;
+    padding: 0 16px;
+    background: #fff;
+    color: #353535;
+    box-shadow: none;
+    font-size: 13px;
+    text-align: start;
+  }
+
+  .sgi-mobile-search :is(svg, .contents) {
+    flex-shrink: 0;
+  }
+
+  .sgi-mobile-search kbd {
+    display: none;
+  }
+
+  .sgi-mobile-carousel-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: 12px;
+    margin: 22px 0 10px;
+  }
+
+  .sgi-mobile-carousel-heading > div {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  .sgi-mobile-carousel-heading > div > span {
+    color: rgb(255 255 255 / 72%);
+    font-size: 11px;
+  }
+
+  .sgi-mobile-carousel-heading h2 {
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  .sgi-mobile-carousel-count {
+    flex: none;
+    color: rgb(255 255 255 / 75%);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sgi-mobile-carousel {
+    display: flex;
+    width: calc(100% + 18px);
+    gap: 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    padding-right: 18px;
+    padding-bottom: 1px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sgi-mobile-carousel::-webkit-scrollbar,
+  .sgi-mobile-tools-rail::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sgi-mobile-slide {
+    position: relative;
+    display: flex;
+    flex: 0 0 min(83%, 320px);
+    flex-direction: column;
+    justify-content: space-between;
+    min-width: 0;
+    min-height: 144px;
+    padding: 15px 17px;
+    border-radius: 15px;
+    scroll-snap-align: start;
+    background: linear-gradient(120deg, #70220c 0%, #9d320f 68%, #b94717 100%);
+    color: #fff;
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 12%);
+  }
+
+  .sgi-mobile-slide:nth-child(2n) {
+    background: linear-gradient(122deg, #7f280d 0%, #ad3b0e 70%, #cd6028 100%);
+  }
+
+  .sgi-mobile-slide-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    color: rgb(255 255 255 / 78%);
+    font-size: 10px;
+    font-weight: 500;
+  }
+
+  .sgi-mobile-slide-content {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 2px;
+    margin: 10px 0;
+  }
+
+  .sgi-mobile-slide-content > span {
+    color: rgb(255 255 255 / 84%);
+    font-size: 12px;
+  }
+
+  .sgi-mobile-slide-content strong {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    font-size: clamp(18px, 5vw, 23px);
+    font-weight: 600;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .sgi-mobile-slide-link {
+    display: inline-flex;
+    width: fit-content;
+    align-items: center;
+    gap: 6px;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 500;
+    text-decoration: none;
+  }
+
+  .sgi-mobile-slide-link:focus-visible,
+  .sgi-mobile-quick-action:focus-visible,
+  .sgi-mobile-tool:focus-visible,
+  .sgi-mobile-activity-row:focus-visible,
+  .sgi-mobile-feature:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 3px;
+  }
+
+  .sgi-mobile-carousel-dots {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0;
+    height: 27px;
+  }
+
+  .sgi-mobile-carousel-dots button {
+    display: grid;
+    width: 29px;
+    height: 27px;
+    place-items: center;
+    border: 0;
+    background: transparent;
+  }
+
+  .sgi-mobile-carousel-dots span {
+    display: block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgb(255 255 255 / 37%);
+  }
+
+  .sgi-mobile-carousel-dots button[aria-current="true"] span {
+    width: 17px;
+    border-radius: 4px;
+    background: #fff;
+  }
+
+  .sgi-mobile-carousel-placeholder {
+    display: flex;
+    align-items: center;
+    min-height: 145px;
+    border-radius: 15px;
+    padding: 18px;
+    background: rgb(255 255 255 / 12%);
+    color: #fff;
+    font-size: 12px;
+  }
+
+  .sgi-mobile-sheet {
+    position: relative;
+    z-index: 1;
+    min-height: 50vh;
+    margin-top: -18px;
+    padding: 0 18px 20px;
+    border-radius: 25px 25px 0 0;
+    background: var(--color-kumo-base);
+  }
+
+  .sgi-mobile-quick-actions {
+    position: relative;
+    top: -26px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    min-height: 79px;
+    margin-bottom: -16px;
+  }
+
+  .sgi-mobile-quick-action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 7px;
+    min-width: 0;
+    padding: 0 1px;
+    color: var(--text-color-kumo-default);
+    text-align: center;
+    text-decoration: none;
+  }
+
+  .sgi-mobile-quick-icon {
+    display: grid;
+    flex: none;
+    width: 49px;
+    height: 49px;
+    place-items: center;
+    border: 1px solid var(--color-kumo-line);
+    border-radius: 16px;
+    background: var(--color-kumo-base);
+    color: #d44400;
+  }
+
+  .sgi-mobile-quick-label {
+    display: block;
+    max-width: 100%;
+    font-size: 11px;
+    line-height: 1.3;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .sgi-mobile-sheet-content {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    min-width: 0;
+  }
+
+  .sgi-mobile-attention {
+    border-radius: 12px;
+    background: #fff3ed;
+    padding: 12px 14px;
+    color: #2c211d;
+  }
+
+  .sgi-mobile-attention-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .sgi-mobile-attention-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .sgi-mobile-attention-heading button {
+    flex: none;
+    width: 26px;
+    height: 26px;
+    min-height: 26px;
+    min-width: 26px;
+  }
+
+  .sgi-mobile-attention p {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .sgi-mobile-attention a {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    gap: 3px;
+    color: #a33200;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .sgi-mobile-section {
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    min-width: 0;
+  }
+
+  .sgi-mobile-section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 24px;
+  }
+
+  .sgi-mobile-section-heading > div {
+    min-width: 0;
+  }
+
+  .sgi-mobile-section-heading h2 {
+    font-size: 15px;
+    line-height: 1.3;
+    font-weight: 600;
+  }
+
+  .sgi-mobile-section-heading p {
+    margin-top: 2px;
+    color: var(--text-color-kumo-subtle);
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .sgi-mobile-section-heading button {
+    min-height: 30px;
+    padding-inline: 6px;
+    font-size: 12px;
+  }
+
+  .sgi-mobile-activity-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--color-kumo-line);
+    border-radius: 13px;
+    background: var(--color-kumo-base);
+    box-shadow: none;
+  }
+
+  .sgi-mobile-activity-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 47px;
+    padding: 11px 13px;
+    text-decoration: none;
+    color: var(--text-color-kumo-default);
+  }
+
+  .sgi-mobile-activity-row + .sgi-mobile-activity-row {
+    border-top: 1px solid var(--color-kumo-line);
+  }
+
+  .sgi-mobile-activity-title {
+    min-width: 0;
+    font-size: 12px;
+    line-height: 1.3;
+    overflow-wrap: break-word;
+  }
+
+  .sgi-mobile-activity-meta {
+    display: flex;
+    align-items: center;
+    flex: none;
+    gap: 8px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .sgi-mobile-activity-meta strong {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+
+  .sgi-mobile-activity-meta svg {
+    color: var(--text-color-kumo-subtle);
+  }
+
+  .sgi-mobile-tools-rail {
+    display: flex;
+    gap: 11px;
+    width: calc(100% + 18px);
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-right: 18px;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+  }
+
+  .sgi-mobile-tool {
+    display: flex;
+    flex: 0 0 60px;
+    min-width: 0;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    color: var(--text-color-kumo-default);
+    text-align: center;
+    font-size: 11px;
+    text-decoration: none;
+    scroll-snap-align: start;
+  }
+
+  .sgi-mobile-tool-icon {
+    display: grid;
+    width: 53px;
+    height: 53px;
+    place-items: center;
+    border-radius: 14px;
+    background: var(--color-kumo-recessed);
+    color: #d44400;
+  }
+
+  .sgi-mobile-tool > span:last-child {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+  }
+
+  .sgi-mobile-feature-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    border-top: 1px solid var(--color-kumo-line);
+  }
+
+  .sgi-mobile-feature {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    min-height: 43px;
+    border-bottom: 1px solid var(--color-kumo-line);
+    color: var(--text-color-kumo-default);
+    text-decoration: none;
+  }
+
+  .sgi-mobile-feature > svg:first-child {
+    flex: none;
+    color: #d44400;
+  }
+
+  .sgi-mobile-feature > span {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+  }
+
+  .sgi-mobile-feature-arrow {
+    flex: none;
+    color: var(--text-color-kumo-subtle);
+  }
+
+  .sgi-mobile-footer-note {
+    padding-bottom: 18px;
+    color: var(--text-color-kumo-subtle);
+    text-align: center;
+    font-size: 11px;
+  }
+
+  .sgi-mobile-favorite-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 10px;
+  }
+
+  /* Floating navigation from the requested reference, not a desktop tabbar. */
+  .app-shell .mobile-bottom-nav {
+    position: fixed;
+    z-index: 40;
+    left: 50%;
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0;
+    width: calc(100% - 28px);
+    max-width: 430px;
+    height: 64px;
+    min-height: 64px;
+    padding: 6px 3px;
+    border-radius: 15px;
+    background: #171717;
+    box-shadow: 0 5px 22px rgb(0 0 0 / 14%);
+    color: #fff;
+  }
+
+  .app-shell .mobile-bottom-nav > a,
+  .app-shell .mobile-bottom-nav > button {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    width: 100%;
+    height: 52px;
+    padding: 0;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: #aeb3be;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .app-shell .mobile-bottom-nav > a .contents,
+  .app-shell .mobile-bottom-nav > button .contents {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+  }
+
+  .app-shell .mobile-bottom-nav > a svg,
+  .app-shell .mobile-bottom-nav > button svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .app-shell .mobile-bottom-nav [aria-current="page"] {
+    color: #fff;
+  }
+
+  .app-shell .mobile-bottom-nav [aria-current="page"] svg {
+    color: #f46c32;
+  }
+
+  .app-shell .mobile-main-action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 3px;
+    height: 52px;
+    min-width: 0;
+    padding: 0 0 2px;
+    color: #fff;
+    font-size: 11px;
+    line-height: 1.2;
+    font-weight: 500;
+  }
+
+  .app-shell .mobile-bottom-nav .mobile-main-button {
+    position: relative;
+    top: auto;
+    display: grid;
+    flex: none;
+    width: 51px;
+    height: 51px;
+    min-width: 51px;
+    min-height: 51px;
+    place-items: center;
+    margin-top: -28px;
+    margin-bottom: 1px;
+    padding: 0;
+    border: 4px solid #fff;
+    border-radius: 50%;
+    outline: none;
+    background: linear-gradient(145deg, #e15a15, #b93000);
+    color: #fff;
+    box-shadow: 0 2px 7px rgb(0 0 0 / 15%);
+  }
+
+  .app-shell .mobile-bottom-nav .mobile-main-button svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .app-shell .mobile-bottom-nav :is(a, button):focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: -2px;
+  }
+}
+
+@media screen and (max-width: 359px) {
+  .sgi-mobile-hero {
+    padding-inline: 14px;
+  }
+
+  .sgi-mobile-sheet {
+    padding-inline: 14px;
+  }
+
+  .sgi-mobile-quick-actions {
+    gap: 3px;
+  }
+
+  .sgi-mobile-quick-icon {
+    width: 44px;
+    height: 44px;
+  }
+
+  .sgi-mobile-quick-label {
+    font-size: 10px;
+  }
+
+  .sgi-mobile-welcome h1 {
+    font-size: 16px;
+  }
+
+  .sgi-mobile-header {
+    gap: 6px;
+  }
+
+  .sgi-mobile-header-actions {
+    gap: 4px;
+  }
+
+  .sgi-mobile-header-actions button {
+    width: 31px;
+    height: 31px;
+    min-width: 31px;
+    min-height: 31px;
+  }
+
+  .app-shell .mobile-bottom-nav {
+    width: calc(100% - 20px);
+  }
+
+  .app-shell .mobile-bottom-nav > a,
+  .app-shell .mobile-bottom-nav > button,
+  .app-shell .mobile-main-action {
+    font-size: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sgi-mobile-carousel {
+    scroll-behavior: auto;
+  }
+}
