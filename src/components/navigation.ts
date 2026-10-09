@@ -1,0 +1,157 @@
+"use client";
+import {
+  ChartPieIcon,
+  BuildingsIcon,
+  PackageIcon,
+  NotePencilIcon,
+  TruckIcon,
+  FilesIcon,
+  CoinsIcon,
+  ReceiptIcon,
+  WalletIcon,
+  ClockIcon,
+  UsersIcon,
+  ShieldCheckIcon,
+  StackIcon,
+  BankIcon,
+  GearSixIcon,
+  CameraIcon,
+  HouseIcon,
+  MapTrifoldIcon,
+  ChartBarIcon,
+} from "@phosphor-icons/react";
+import type { Permission } from "@/lib/domain";
+export const navigation: {
+  href: string;
+  label: string;
+  shortLabel: string;
+  icon: typeof TruckIcon;
+  permission?: Permission;
+  group: string;
+}[] = [
+  {
+    href: "/home",
+    label: "Homepage",
+    shortLabel: "Beranda",
+    icon: HouseIcon,
+    permission: "dashboard",
+    group: "Pemantauan",
+  },
+  {
+    href: "/analytics",
+    label: "Analitik",
+    shortLabel: "Analitik",
+    icon: ChartPieIcon,
+    permission: "dashboard",
+    group: "Pemantauan",
+  },
+  {
+    href: "/maps",
+    label: "Peta pekerjaan",
+    shortLabel: "Peta",
+    icon: MapTrifoldIcon,
+    permission: "jobsRead",
+    group: "Operasional",
+  },
+  {
+    href: "/customers",
+    label: "Customer",
+    shortLabel: "Klien",
+    icon: BuildingsIcon,
+    permission: "customersRead",
+    group: "Operasional",
+  },
+  {
+    href: "/requests",
+    label: "Permintaan order",
+    shortLabel: "Order",
+    icon: PackageIcon,
+    permission: "quotationsRead",
+    group: "Operasional",
+  },
+  {
+    href: "/quotations",
+    label: "Penawaran & kontrak",
+    shortLabel: "Tarif",
+    icon: NotePencilIcon,
+    permission: "quotationsRead",
+    group: "Operasional",
+  },
+  {
+    href: "/jobs",
+    label: "Job order",
+    shortLabel: "Job",
+    icon: TruckIcon,
+    permission: "jobsRead",
+    group: "Operasional",
+  },
+  {
+    href: "/reports",
+    label: "Laporan pekerjaan",
+    shortLabel: "Lapor",
+    icon: CameraIcon,
+    permission: "reportsRead",
+    group: "Operasional",
+  },
+  {
+    href: "/documents",
+    label: "Dokumen & review",
+    shortLabel: "Berkas",
+    icon: FilesIcon,
+    permission: "documentsRead",
+    group: "Operasional",
+  },
+  {
+    href: "/billing",
+    label: "Komponen tagihan",
+    shortLabel: "Tagihan",
+    icon: CoinsIcon,
+    permission: "billingRead",
+    group: "Keuangan",
+  },
+  {
+    href: "/invoices",
+    label: "Invoice",
+    shortLabel: "Invoice",
+    icon: ReceiptIcon,
+    permission: "invoicesRead",
+    group: "Keuangan",
+  },
+  {
+    href: "/payments",
+    label: "Pembayaran",
+    shortLabel: "Bayar",
+    icon: WalletIcon,
+    permission: "paymentsRead",
+    group: "Keuangan",
+  },
+  {
+    href: "/attendance",
+    label: "Absensi saya",
+    shortLabel: "Absen",
+    icon: ClockIcon,
+    group: "Administrasi",
+  },
+  {
+    href: "/users",
+    label: "Pengguna & akses",
+    shortLabel: "Akun",
+    icon: UsersIcon,
+    permission: "users",
+    group: "Administrasi",
+  },
+  {
+    href: "/audit",
+    label: "Audit trail",
+    shortLabel: "Audit",
+    icon: ShieldCheckIcon,
+    permission: "audit",
+    group: "Administrasi",
+  },
+];
+export const navigationGroups = [
+  { label: "Pemantauan", icon: ChartBarIcon },
+  { label: "Operasional", icon: StackIcon },
+  { label: "Keuangan", icon: BankIcon },
+  { label: "Administrasi", icon: GearSixIcon },
+];

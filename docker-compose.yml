@@ -1,0 +1,21 @@
+name: sgi-one
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sgi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sgi_local_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-sgi_one}
+      TZ: Asia/Jakarta
+    ports:
+      - "127.0.0.1:54329:5432"
+    volumes:
+      - sgi_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+volumes:
+  sgi_postgres:
