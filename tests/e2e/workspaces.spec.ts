@@ -139,7 +139,7 @@ test("six genuine role dashboards, complete mobile menus and floating role actio
           await page.locator(".sgi-mobile-feature").count(),
         ).toBeGreaterThan(1);
         expect(
-          await page.locator(".sgi-mobile-feature svg").first().count(),
+          await page.locator(".sgi-mobile-feature > svg:first-child").count(),
         ).toBe(await page.locator(".sgi-mobile-feature").count());
       }
       await page.setViewportSize({ width: 390, height: 844 });
@@ -150,7 +150,7 @@ test("six genuine role dashboards, complete mobile menus and floating role actio
       const navBox = await nav.boundingBox();
       expect(footer).not.toBeNull();
       expect(navBox).not.toBeNull();
-      expect(footer!.bottom).toBeLessThan(navBox!.y);
+      expect(footer!.y + footer!.height).toBeLessThan(navBox!.y);
       await page
         .getByRole("heading", { name: /^Halo,/ })
         .scrollIntoViewIfNeeded();
@@ -327,7 +327,7 @@ test("homepage controls persist preferences and map coordinates use the real sco
   await expect(page.locator(".loading-state")).toHaveCount(0);
   await expect(
     page
-      .getByRole("navigation", { name: "Atur menu favorit", exact: true })
+      .locator(".sgi-mobile-tools-rail")
       .getByRole("link", { name: /^Absensi|^Absen/ }),
   ).toBeVisible();
   await page
@@ -339,7 +339,7 @@ test("homepage controls persist preferences and map coordinates use the real sco
     .getByRole("button", { name: "Pengaturan akun", exact: true })
     .click();
   await page
-    .getByRole("button", { name: "Tampilkan ringkasan perhatian", exact: true })
+    .getByRole("button", { name: "Tampilkan informasi perhatian", exact: true })
     .click();
   await expect(page.locator(".sgi-mobile-attention")).toBeVisible();
   await page
