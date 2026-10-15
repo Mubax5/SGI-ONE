@@ -3,13 +3,24 @@ import { getActor } from "@/lib/security";
 import { jobDetail } from "@/modules/queries";
 import { DomainError } from "@/lib/domain";
 import { PrintButton } from "@/components/print-button";
+import {
+  scopedWorkspaceActor,
+  redirectLegacyWorkspace,
+} from "@/lib/workspace-server";
+import type { PageQuery } from "@/lib/workspace-url";
+import { z } from "zod";
 export default async function DeliveryPrint({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string; noteId: string }>;
+  searchParams: Promise<PageQuery>;
 }) {
-  const actor = await getActor();
   const { id, noteId } = await params;
+  redirectLegacyWorkspace(`/jobs/${id}/delivery/${noteId}`, await searchParams);
+  if (!z.uuid().safeParse(id).success || !z.uuid().safeParse(noteId).success)
+    notFound();
+  const actor = await scopedWorkspaceActor(await getActor());
   let job;
   try {
     job = await jobDetail(actor, id);

@@ -6,7 +6,7 @@
       "idx": 0,
       "version": "7",
       "when": 1791466674853,
-      "tag": "0000_regular_newton_destine",
+      "tag": "0000_initial_schema",
       "breakpoints": true
     },
     {
@@ -20,21 +20,42 @@
       "idx": 2,
       "version": "7",
       "when": 1791522254728,
-      "tag": "0002_flippant_red_hulk",
+      "tag": "0002_work_reports",
       "breakpoints": true
     },
     {
       "idx": 3,
       "version": "7",
       "when": 1791522282666,
-      "tag": "0003_late_thunderball",
+      "tag": "0003_report_photo_validation",
       "breakpoints": true
     },
     {
       "idx": 4,
       "version": "7",
       "when": 1791528749365,
-      "tag": "0004_grey_mach_iv",
+      "tag": "0004_job_locations",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791879501398,
+      "tag": "0005_attendance_evidence_and_sites",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791930321214,
+      "tag": "0006_attendance_camera_and_reviews",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791933779134,
+      "tag": "0007_attendance_capture_validation",
       "breakpoints": true
     }
   ]

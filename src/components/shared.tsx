@@ -2,18 +2,16 @@
 import {
   Badge,
   Banner,
-  Empty as KumoEmpty,
   InputArea,
   Text,
-  Button,
-  Dialog,
   Input,
   LayerCard,
   Select,
 } from "@cloudflare/kumo";
-import { XIcon, ArrowClockwiseIcon } from "@phosphor-icons/react";
-import { ReactNode, useId } from "react";
+import { AdaptiveDialog } from "./adaptive-dialog";
+import { ReactNode, useId, useEffect, useState } from "react";
 import { statuses } from "@/lib/domain";
+import { announceChange, workspaceHeaders } from "@/lib/live-data";
 export function SectionPanel({
   title,
   description,
@@ -81,15 +79,6 @@ export const dateText = (s: string | null | undefined, time = false) =>
         timeZone: "Asia/Jakarta",
       }).format(new Date(s))
     : "—";
-export function Empty({
-  text = "Belum ada data. Tambahkan data untuk memulai alur kerja.",
-}: {
-  text?: string;
-}) {
-  return (
-    <KumoEmpty className="empty" title="Belum ada data" description={text} />
-  );
-}
 export function Feedback({
   error,
   success,
@@ -97,13 +86,22 @@ export function Feedback({
   error?: string;
   success?: string;
 }) {
+  const [visible, setVisible] = useState(success);
+  useEffect(() => {
+    const start = window.setTimeout(() => setVisible(success), 0);
+    const expiry = window.setTimeout(() => setVisible(undefined), 5000);
+    return () => {
+      window.clearTimeout(start);
+      window.clearTimeout(expiry);
+    };
+  }, [success]);
   return error ? (
     <div className="feedback" role="alert">
       <Banner variant="error" description={error} />
     </div>
-  ) : success ? (
+  ) : visible ? (
     <div className="feedback" role="status">
-      <Banner variant="secondary" description={success} />
+      <Banner variant="secondary" description={visible} />
     </div>
   ) : null;
 }
@@ -112,42 +110,28 @@ export function Modal({
   onClose,
   title,
   description,
+  className,
   children,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
-  description: string;
+  description?: string;
+  className?: string;
   children: ReactNode;
 }) {
   return (
-    <Dialog.Root
+    <AdaptiveDialog
       open={open}
       onOpenChange={(o) => {
         if (!o) onClose();
       }}
+      title={title}
+      description={description}
+      className={className}
     >
-      <Dialog size="xl" className="modal">
-        <div className="modal-header">
-          <div>
-            <Dialog.Title className="text-xl font-semibold">
-              {title}
-            </Dialog.Title>
-            <Dialog.Description className="mt-1.5 text-sm text-kumo-subtle">
-              {description}
-            </Dialog.Description>
-          </div>
-          <Button
-            variant="ghost"
-            shape="square"
-            icon={<XIcon size={18} />}
-            aria-label="Tutup dialog"
-            onClick={onClose}
-          />
-        </div>
-        {children}
-      </Dialog>
-    </Dialog.Root>
+      {children}
+    </AdaptiveDialog>
   );
 }
 export function Choice({
@@ -215,26 +199,6 @@ export function TextField({
   );
 }
 export { DataTable } from "./data-table";
-export function Refresh({
-  onClick,
-  loading,
-}: {
-  onClick: () => void;
-  loading: boolean;
-}) {
-  return (
-    <Button
-      aria-label="Muat ulang data"
-      variant="secondary"
-      size="sm"
-      icon={<ArrowClockwiseIcon size={16} />}
-      loading={loading}
-      onClick={onClick}
-    >
-      Muat ulang
-    </Button>
-  );
-}
 export async function api<T>(path: string, body?: unknown): Promise<T> {
   const isForm = body instanceof FormData;
   const response = await fetch(`/api/${path}`, {
@@ -243,13 +207,19 @@ export async function api<T>(path: string, body?: unknown): Promise<T> {
       ? {}
       : {
           body: isForm ? body : JSON.stringify(body),
-          headers: isForm ? {} : { "Content-Type": "application/json" },
         }),
+    headers: {
+      ...workspaceHeaders(),
+      ...(!isForm && body !== undefined
+        ? { "Content-Type": "application/json" }
+        : {}),
+    },
     cache: "no-store",
   });
   const result = await response.json();
   if (!response.ok)
     throw new Error(result.error ?? "Operasi gagal. Coba lagi.");
+  if (body !== undefined) announceChange();
   return result as T;
 }
 export function filterRows<T>(

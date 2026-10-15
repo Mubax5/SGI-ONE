@@ -6,12 +6,15 @@ import { Actor, DomainError } from "@/lib/domain";
 import { requireJob } from "@/lib/security";
 import { scopedJobs } from "./queries";
 import { log } from "./services";
+import { gpsOriginInput, roadRoute } from "@/lib/road-routing";
 export const locationInput = z
   .object({
     originLat: z.number().finite().min(-90).max(90),
     originLng: z.number().finite().min(-180).max(180),
     destinationLat: z.number().finite().min(-90).max(90),
     destinationLng: z.number().finite().min(-180).max(180),
+    originLabel: z.string().trim().min(1).max(500).nullable().optional(),
+    destinationLabel: z.string().trim().min(1).max(500).nullable().optional(),
   })
   .strict();
 export async function mapJobs(actor: Actor) {
@@ -43,7 +46,12 @@ export async function mapJobs(actor: Actor) {
 }
 export async function saveLocation(actor: Actor, id: string, input: unknown) {
   await requireJob(actor, id, "jobsWrite");
-  const value = locationInput.parse(input);
+  const parsed = locationInput.parse(input);
+  const value = {
+    ...parsed,
+    originLabel: parsed.originLabel ?? null,
+    destinationLabel: parsed.destinationLabel ?? null,
+  };
   return db.transaction(async (tx) => {
     await tx.select().from(jobs).where(eq(jobs.id, id)).for("update");
     const job = await requireJob(actor, id, "jobsWrite", tx);
@@ -66,3 +74,25 @@ export async function saveLocation(actor: Actor, id: string, input: unknown) {
   });
 }
 export type MapData = Awaited<ReturnType<typeof mapJobs>>;
+export async function jobRoadRoute(actor: Actor, id: string, origin?: unknown) {
+  await requireJob(actor, id, "jobsRead");
+  const [location] = await db
+    .select()
+    .from(jobLocations)
+    .where(eq(jobLocations.jobId, id));
+  if (!location)
+    throw new DomainError(
+      "Pilih asal dan tujuan job sebelum mencari rute.",
+      422,
+    );
+  const start =
+    origin === undefined
+      ? { lat: location.originLat, lng: location.originLng }
+      : gpsOriginInput.parse(origin);
+  return roadRoute(
+    start,
+    { lat: location.destinationLat, lng: location.destinationLng },
+    origin !== undefined,
+    { preference: "balanced" },
+  );
+}

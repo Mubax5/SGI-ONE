@@ -1,44 +1,12 @@
 "use client";
-import { Banner, Button, CommandPalette, Text } from "@cloudflare/kumo";
+import { Banner, CommandPalette, Dialog, Text } from "@cloudflare/kumo";
 import { MagnifyingGlassIcon } from "@phosphor-icons/react";
-import {
-  createContext,
-  ReactNode,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Actor, can } from "@/lib/domain";
-import { navigation } from "./navigation";
+import { navigation, workspaceNavigation } from "./navigation";
+import { Role } from "@/lib/domain";
 import type { SearchResult } from "@/modules/search";
-const SearchContext = createContext<(() => void) | null>(null);
-export function SearchProvider({
-  children,
-  open,
-}: {
-  children: ReactNode;
-  open: () => void;
-}) {
-  return (
-    <SearchContext.Provider value={open}>{children}</SearchContext.Provider>
-  );
-}
-export function SearchTrigger({ className = "" }: { className?: string }) {
-  const open = useContext(SearchContext);
-  return (
-    <Button
-      variant="outline"
-      className={`global-search-trigger ${className}`}
-      icon={<MagnifyingGlassIcon size={18} />}
-      aria-label="Buka pencarian global"
-      onClick={() => open?.()}
-    >
-      <span>Cari fitur, job, customer…</span>
-      <kbd>Ctrl K</kbd>
-    </Button>
-  );
-}
 type SearchItem = SearchResult & { icon: typeof MagnifyingGlassIcon };
 type SearchGroup = { label: string; items: SearchItem[] };
 export function GlobalSearch({
@@ -67,7 +35,11 @@ export function GlobalSearch({
       try {
         const result = await fetch(
           `/api/search?q=${encodeURIComponent(value)}`,
-          { signal: abort.signal, cache: "no-store" },
+          {
+            signal: abort.signal,
+            cache: "no-store",
+            headers: { "x-sgi-workspace": role },
+          },
         );
         const data = await result.json();
         if (!result.ok)
@@ -91,8 +63,8 @@ export function GlobalSearch({
       clearTimeout(timer);
       abort.abort();
     };
-  }, [value, open]);
-  const features = navigation
+  }, [value, open, role]);
+  const features = workspaceNavigation(actor, role as Role)
     .filter(
       (item) =>
         (!item.permission || can(actor, item.permission)) &&
@@ -130,7 +102,7 @@ export function GlobalSearch({
   }
   function select(item: SearchItem) {
     const target = new URL(item.href, "http://sgi.local");
-    target.searchParams.set("role", role);
+    target.searchParams.delete("role");
     if (target.searchParams.has("record"))
       target.searchParams.set("open", String(Date.now()));
     change(false);
@@ -147,62 +119,65 @@ export function GlobalSearch({
       getSelectableItems={(items) => items.flatMap((group) => group.items)}
       onSelect={select}
     >
-      <CommandPalette.Input
-        placeholder="Cari fitur, nomor job, customer, invoice…"
-        aria-label="Cari fitur dan data SGI"
-        maxLength={100}
-      />
-      <CommandPalette.List>
-        <CommandPalette.Results>
-          {(group: SearchGroup) => (
-            <CommandPalette.Group key={group.label} items={group.items}>
-              <CommandPalette.GroupLabel>
-                {group.label}
-              </CommandPalette.GroupLabel>
-              <CommandPalette.Items>
-                {(item: SearchItem) => (
-                  <CommandPalette.Item
-                    key={item.id}
-                    value={item}
-                    onClick={() => select(item)}
-                  >
-                    <item.icon
-                      size={20}
-                      className="search-result-icon"
-                      aria-hidden="true"
-                    />
-                    <span className="search-result-copy">
-                      <Text as="span">{item.label}</Text>
-                      <Text as="span" variant="secondary">
-                        {item.detail}
-                      </Text>
-                    </span>
-                  </CommandPalette.Item>
-                )}
-              </CommandPalette.Items>
-            </CommandPalette.Group>
+      <div className="sgi-global-search">
+        <Dialog.Title className="sr-only">Pencarian SGI One</Dialog.Title>
+        <CommandPalette.Input
+          placeholder="Cari fitur, nomor job, customer, invoice…"
+          aria-label="Cari fitur dan data SGI"
+          maxLength={100}
+        />
+        <CommandPalette.List>
+          <CommandPalette.Results>
+            {(group: SearchGroup) => (
+              <CommandPalette.Group key={group.label} items={group.items}>
+                <CommandPalette.GroupLabel>
+                  {group.label}
+                </CommandPalette.GroupLabel>
+                <CommandPalette.Items>
+                  {(item: SearchItem) => (
+                    <CommandPalette.Item
+                      key={item.id}
+                      value={item}
+                      onClick={() => select(item)}
+                    >
+                      <item.icon
+                        size={20}
+                        className="search-result-icon"
+                        aria-hidden="true"
+                      />
+                      <span className="search-result-copy">
+                        <Text as="span">{item.label}</Text>
+                        <Text as="span" variant="secondary">
+                          {item.detail}
+                        </Text>
+                      </span>
+                    </CommandPalette.Item>
+                  )}
+                </CommandPalette.Items>
+              </CommandPalette.Group>
+            )}
+          </CommandPalette.Results>
+          {value.length >= 2 && response?.query !== value && (
+            <CommandPalette.Loading />
           )}
-        </CommandPalette.Results>
-        {value.length >= 2 && response?.query !== value && (
-          <CommandPalette.Loading />
-        )}
-        {response?.query === value && response.error && (
-          <div role="alert" className="search-feedback">
-            <Banner variant="error" description={response.error} />
-          </div>
-        )}
-        {(value.length < 2 || response?.query === value) &&
-          !response?.error && (
-            <CommandPalette.Empty>
-              {value.length < 2
-                ? "Ketik minimal dua karakter untuk mencari data."
-                : "Tidak ada hasil. Coba nomor job, nama customer, atau kata kunci lain."}
-            </CommandPalette.Empty>
+          {response?.query === value && response.error && (
+            <div role="alert" className="search-feedback">
+              <Banner variant="error" description={response.error} />
+            </div>
           )}
-      </CommandPalette.List>
-      <CommandPalette.Footer>
-        ↑ ↓ pilih · Enter buka · Esc tutup · Data sesuai izin Anda
-      </CommandPalette.Footer>
+          {(value.length < 2 || response?.query === value) &&
+            !response?.error && (
+              <CommandPalette.Empty>
+                {value.length < 2
+                  ? "Ketik minimal dua karakter untuk mencari data."
+                  : "Tidak ada hasil. Coba nomor job, nama customer, atau kata kunci lain."}
+              </CommandPalette.Empty>
+            )}
+        </CommandPalette.List>
+        <CommandPalette.Footer>
+          ↑ ↓ pilih · Enter buka · Esc tutup
+        </CommandPalette.Footer>
+      </div>
     </CommandPalette.Root>
   );
 }

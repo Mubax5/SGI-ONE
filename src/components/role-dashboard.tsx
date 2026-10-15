@@ -1,4 +1,5 @@
 "use client";
+import { ToolbarAction } from "./toolbar-action";
 import {
   Badge,
   Button,
@@ -14,12 +15,9 @@ import {
   ArrowRightIcon,
   CameraIcon,
   DownloadSimpleIcon,
-  UserCircleIcon,
 } from "@phosphor-icons/react";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Actor, formatMoney, Role, roleLabels } from "@/lib/domain";
-import { workspaceActions, workspaceRole } from "@/lib/workspace";
 import { defaultReportPeriod } from "@/lib/report-period";
 import type { WorkspaceData } from "@/modules/workspace";
 import type { Serialized } from "./types";
@@ -33,44 +31,15 @@ import {
   DataTable,
   dateText,
   Feedback,
-  Refresh,
   SectionPanel,
   Status,
 } from "./shared";
-import { LoadingState, PageHeader, RecordFacts } from "./workspace-ui";
+import { LoadingState, RecordFacts } from "./workspace-ui";
+import { useLiveRevision } from "@/lib/live-data";
+import { SystemOverview } from "./system-overview";
+import { usePhoneLayout } from "@/lib/phone-layout";
 type Data = Serialized<WorkspaceData>;
 type Of<R extends Role> = Extract<Data, { role: R }>;
-const copy: Record<Role, { title: string; description: string }> = {
-  director: {
-    title: "Kinerja bisnis",
-    description:
-      "Pantau pekerjaan, penagihan, dan piutang dari transaksi yang tercatat.",
-  },
-  operations: {
-    title: "Kendali operasional",
-    description:
-      "Atur penugasan, periksa bukti kerja, dan selesaikan hambatan pekerjaan.",
-  },
-  field: {
-    title: "Pekerjaan saya",
-    description:
-      "Kerjakan job yang ditugaskan, catat progres, dan kirim foto dari lapangan.",
-  },
-  finance: {
-    title: "Penagihan dan penerimaan",
-    description:
-      "Siapkan invoice, tindak lanjuti piutang, dan pastikan pembayaran teralokasi.",
-  },
-  sales: {
-    title: "Relasi dan pipeline",
-    description: "Catat kebutuhan pelanggan dan tindak lanjuti penawaran.",
-  },
-  admin: {
-    title: "Pengguna dan keamanan",
-    description:
-      "Kelola akun internal, akses role, dan jejak perubahan pengguna.",
-  },
-};
 const active = (status: string) => !["completed", "cancelled"].includes(status);
 function JobLink({ id, number }: { id: string; number: string }) {
   return (
@@ -83,12 +52,15 @@ export function RoleDashboard({
   actor,
   role,
   presentation = "analytics",
+  homepageTools,
 }: {
   actor: Actor;
   role: Role;
   presentation?: "dashboard" | "analytics";
+  homepageTools?: (data: Data | undefined) => ReactNode;
 }) {
-  const router = useRouter();
+  const liveRevision = useLiveRevision();
+  const mobile = usePhoneLayout();
   const [data, setData] = useState<Data>();
   const [period, setPeriod] = useState(defaultReportPeriod);
   const [revision, setRevision] = useState(0);
@@ -101,13 +73,10 @@ export function RoleDashboard({
       params.set("from", period.from);
       params.set("to", period.to);
     }
-    if (role !== workspaceRole(actor)) params.set("role", role);
     api<Data>(`data/dashboard${params.size ? `?${params}` : ""}`)
       .then((result) => {
         if (result.role !== role)
-          throw new Error(
-            "Role Anda berubah. Muat ulang halaman untuk memperbarui workspace.",
-          );
+          throw new Error("Akses Anda berubah. Muat ulang halaman.");
         if (alive) {
           setData(result);
           setError("");
@@ -122,12 +91,7 @@ export function RoleDashboard({
     return () => {
       alive = false;
     };
-  }, [actor, role, period.from, period.to, revision]);
-  function refresh() {
-    setLoading(true);
-    setError("");
-    setRevision((r) => r + 1);
-  }
+  }, [actor, role, period.from, period.to, revision, liveRevision]);
   function apply(from: string, to: string) {
     setLoading(true);
     setError("");
@@ -178,86 +142,71 @@ export function RoleDashboard({
     <div
       className={`role-dashboard role-dashboard-${role}`}
       data-workspace-role={role}
+      aria-busy={loading || (data?.role !== role && !error)}
     >
-      <PageHeader
-        title={presentation === "dashboard" ? "Dashboard" : "Analitik"}
-        template="report"
-        context={roleLabels[role]}
-        description={
-          presentation === "analytics" ? copy[role].description : undefined
-        }
-        actions={
-          <div className="dashboard-controls">
-            {actor.roles.length > 1 && (
-              <Select<Role>
-                aria-label="Workspace role"
-                value={role}
-                items={Object.fromEntries(
-                  actor.roles.map((r) => [r, roleLabels[r]]),
-                )}
-                onValueChange={(next) => {
-                  if (next)
-                    router.push(
-                      `${presentation === "dashboard" ? "/home" : "/analytics"}?role=${next}`,
-                    );
-                }}
-              />
-            )}
-            <Refresh loading={loading} onClick={refresh} />
-          </div>
-        }
-      />
+      {presentation === "dashboard" &&
+        homepageTools?.(data?.role === role ? data : undefined)}
       <Feedback error={error} />
-      {presentation === "dashboard" && (
-        <LayerCard className="role-hero">
-          <div className="role-identity">
-            <UserCircleIcon size={24} />
-            <div>
-              <Text>{actor.name}</Text>
-              <Badge variant="secondary">{roleLabels[role]}</Badge>
-            </div>
-          </div>
-          <div className="role-hero-main">
-            <div>
-              <Text as="h2">{copy[role].title}</Text>
-              <Text variant="secondary">{copy[role].description}</Text>
-            </div>
-            <LinkButton
-              className="hero-action"
-              variant="primary"
-              href={workspaceActions[role].href}
-            >
-              {workspaceActions[role].label}
-            </LinkButton>
-          </div>
-        </LayerCard>
-      )}
-      {role === "director" && (
-        <LayerCard className="filter-bar period-bar">
-          <ReportPeriod
-            from={period.from}
-            to={period.to}
-            loading={loading}
-            onApply={apply}
-          />
-          <Button
-            aria-label="Ekspor laporan"
-            icon={<DownloadSimpleIcon size={18} />}
-            onClick={exportReport}
-            disabled={!data || loading || Boolean(error)}
-          >
-            Ekspor laporan
-          </Button>
-        </LayerCard>
-      )}
-      {loading ? (
+      {(role === "director" || presentation === "analytics") &&
+        (presentation !== "analytics" || mobile) && (
+          <LayerCard className="filter-bar period-bar">
+            <ReportPeriod
+              from={period.from}
+              to={period.to}
+              loading={loading}
+              onApply={apply}
+            />
+            {role === "director" && (
+              <ToolbarAction
+                aria-label="Ekspor laporan"
+                className="toolbar-icon-export"
+                icon={<DownloadSimpleIcon size={18} />}
+                onClick={exportReport}
+                disabled={!data || loading || Boolean(error)}
+              >
+                Ekspor laporan
+              </ToolbarAction>
+            )}
+          </LayerCard>
+        )}
+      {(loading || data?.role !== role) &&
+      !error &&
+      (!data || data.role !== role) ? (
         <LoadingState
-          text={`Memuat ${presentation === "dashboard" ? "dashboard" : "analitik"} sesuai role…`}
+          text={`Memuat ${presentation === "dashboard" ? "dashboard" : "analitik"}…`}
         />
-      ) : error || !data ? null : (
+      ) : error || !data || data.role !== role ? null : (
         <div className="role-dashboard-content">
-          {presentation === "analytics" && <WorkspaceChart data={data} />}
-          {data.role === "director" ? (
+          {presentation === "analytics" ? (
+            <WorkspaceChart
+              data={data}
+              period={period}
+              controls={
+                !mobile && (
+                  <>
+                    <ReportPeriod
+                      from={period.from}
+                      to={period.to}
+                      loading={loading}
+                      onApply={apply}
+                    />
+                    {role === "director" && (
+                      <Button
+                        aria-label="Ekspor laporan"
+                        title="Ekspor laporan"
+                        shape="square"
+                        variant="outline"
+                        className="desktop-filter-trigger"
+                        icon={<DownloadSimpleIcon size={18} />}
+                        onClick={exportReport}
+                        disabled={loading || Boolean(error)}
+                      />
+                    )}
+                  </>
+                )
+              }
+            />
+          ) : data.role === "director" ? (
             <DashboardView data={data} />
           ) : data.role === "operations" ? (
             <Operations data={data} />
@@ -283,7 +232,6 @@ function Operations({ data: d }: { data: Of<"operations"> }) {
     <>
       <SectionPanel
         title="Penugasan pekerjaan"
-        description="Job aktif diurutkan berdasarkan tenggat; pastikan setiap pekerjaan mempunyai petugas."
         action={
           <LinkButton variant="primary" href="/jobs?create=1">
             Buat job order
@@ -292,7 +240,7 @@ function Operations({ data: d }: { data: Of<"operations"> }) {
       >
         <div className="dashboard-meter">
           <Meter
-            label="Job aktif yang sudah memiliki petugas"
+            label="Job aktif ditugaskan"
             max={Math.max(jobs.length, 1)}
             value={jobs.filter((j) => j.assignees.length > 0).length}
             customValue={`${jobs.filter((j) => j.assignees.length > 0).length} / ${jobs.length} job`}
@@ -329,11 +277,11 @@ function Operations({ data: d }: { data: Of<"operations"> }) {
           ]}
         />
       </SectionPanel>
-      <Grid variant="2up" gap="sm">
+      <Grid variant="2up" gap="sm" className="dashboard-support-grid">
         <GridItem>
           <SectionPanel
             title="Bukti menunggu review"
-            description={`${d.reviews.length} dokumen versi terbaru perlu diperiksa.`}
+            description={`${d.reviews.length} dokumen perlu diperiksa`}
           >
             <DataTable
               rows={d.reviews}
@@ -366,10 +314,7 @@ function Operations({ data: d }: { data: Of<"operations"> }) {
           </SectionPanel>
         </GridItem>
         <GridItem>
-          <SectionPanel
-            title="Laporan dari lapangan"
-            description="Aktivitas terbaru dari pekerjaan yang dikelola."
-          >
+          <SectionPanel title="Laporan dari lapangan">
             <DataTable
               rows={d.reports}
               perPage={4}
@@ -420,7 +365,7 @@ function Field({ data: d }: { data: Of<"field"> }) {
     <>
       <SectionPanel
         title="Tugas aktif saya"
-        description={`${jobs.length} pekerjaan yang ditugaskan kepada Anda.`}
+        description={`${jobs.length} tugas aktif`}
       >
         {!jobs.length ? (
           <div className="empty">
@@ -456,10 +401,7 @@ function Field({ data: d }: { data: Of<"field"> }) {
           </div>
         )}
       </SectionPanel>
-      <SectionPanel
-        title="Kehadiran dan laporan saya"
-        description="Riwayat pribadi Anda, bukan seluruh aktivitas perusahaan."
-      >
+      <SectionPanel title="Kehadiran dan laporan saya">
         <RecordFacts
           items={[
             {
@@ -484,7 +426,7 @@ function Field({ data: d }: { data: Of<"field"> }) {
         <DataTable
           rows={d.reports}
           perPage={3}
-          empty="Catat pekerjaan pertama melalui tombol Laporan di tengah navbar."
+          empty="Buat laporan untuk mencatat pekerjaan."
           columns={[
             {
               title: "Pekerjaan",
@@ -520,7 +462,6 @@ function Finance({ data: d }: { data: Of<"finance"> }) {
     <>
       <SectionPanel
         title="Posisi piutang"
-        description="Saldo saat ini dari invoice terbit, pembayaran, dan koreksi; draft dikecualikan."
         action={
           <Select<string>
             aria-label="Mata uang finance"
@@ -549,7 +490,7 @@ function Finance({ data: d }: { data: Of<"finance"> }) {
               ),
             },
             {
-              label: "Credit belum dialokasi",
+              label: "Saldo belum dialokasikan",
               value: formatMoney(
                 unapplied.reduce((sum, p) => sum + p.unapplied, 0),
                 currency,
@@ -565,10 +506,16 @@ function Finance({ data: d }: { data: Of<"finance"> }) {
             {
               title: "Invoice / customer",
               render: (r) => (
-                <LinkButton variant="ghost" href={`/invoices?record=${r.id}`}>
-                  {r.number}
+                <div>
+                  <LinkButton
+                    variant="ghost"
+                    href={`/invoices?record=${r.id}`}
+                    className="record-link"
+                  >
+                    {r.number}
+                  </LinkButton>
                   <p>{r.customerName}</p>
-                </LinkButton>
+                </div>
               ),
             },
             {
@@ -583,11 +530,11 @@ function Finance({ data: d }: { data: Of<"finance"> }) {
           ]}
         />
       </SectionPanel>
-      <Grid variant="2up" gap="sm">
+      <Grid variant="2up" gap="sm" className="dashboard-support-grid">
         <GridItem>
           <SectionPanel
             title="Draft perlu ditindaklanjuti"
-            description={`${drafts.length} draft; penerbitan mengikuti validasi server.`}
+            description={`${drafts.length} draft`}
             action={
               <LinkButton variant="primary" href="/invoices?create=1">
                 Buat invoice
@@ -632,7 +579,6 @@ function Finance({ data: d }: { data: Of<"finance"> }) {
         <GridItem>
           <SectionPanel
             title="Penerimaan belum dialokasi"
-            description="Tautkan penerimaan ke invoice pelanggan yang sesuai."
             action={
               <LinkButton variant="primary" href="/payments?create=1">
                 Catat pembayaran
@@ -680,7 +626,6 @@ function Sales({ data: d }: { data: Of<"sales"> }) {
     <>
       <SectionPanel
         title="Pipeline penawaran"
-        description="Pisahkan permintaan tercatat, draft penawaran, dan tarif yang telah disetujui."
         action={
           <LinkButton variant="primary" href="/requests?create=1">
             Catat order
@@ -754,7 +699,7 @@ function Sales({ data: d }: { data: Of<"sales"> }) {
       </SectionPanel>
       <SectionPanel
         title="Relasi pelanggan"
-        description={`${d.customers.filter((c) => c.active).length} customer aktif untuk permintaan berikutnya.`}
+        description={`${d.customers.filter((c) => c.active).length} customer aktif`}
         action={
           <LinkButton href="/customers?create=1" variant="primary">
             Tambah customer
@@ -796,9 +741,9 @@ function Admin({ data: d }: { data: Of<"admin"> }) {
   const users = d.users.filter((u) => u.active);
   return (
     <>
+      <SystemOverview data={d.system} compact />
       <SectionPanel
         title="Akses pengguna aktif"
-        description="Perubahan role berlaku pada request berikutnya; deaktivasi mencabut sesi."
         action={
           <LinkButton variant="primary" href="/users?create=1">
             Tambah pengguna
@@ -827,10 +772,10 @@ function Admin({ data: d }: { data: Of<"admin"> }) {
               ),
             },
             {
-              title: "Role",
+              title: "Peran",
               render: (r) =>
                 r.roles.map((role) => roleLabels[role]).join(", ") ||
-                "Belum ada role",
+                "Belum ada peran",
             },
             {
               title: "Status",
@@ -854,7 +799,6 @@ function Admin({ data: d }: { data: Of<"admin"> }) {
       </SectionPanel>
       <SectionPanel
         title="Perubahan akses terbaru"
-        description="Audit administrasi akun; riwayat tidak dapat diubah."
         action={
           <LinkButton href="/audit" icon={<ArrowRightIcon size={16} />}>
             Buka audit

@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "description": "Local-first SGI logistics operations and billing",
   "scripts": {
+    "predev": "node scripts/prepare-pdf-worker.mjs",
+    "prebuild": "node scripts/prepare-pdf-worker.mjs",
     "dev": "next dev --hostname 127.0.0.1 --port 4310",
     "build": "next build",
     "start": "next start --hostname 127.0.0.1 --port 4310",
@@ -21,7 +23,8 @@
     "setup": "tsx scripts/setup.ts",
     "test:db": "tsx scripts/test-database.ts",
     "format": "prettier --write src scripts tests *.ts *.mjs *.yml *.json",
-    "test:r2": "tsx scripts/r2-acceptance.ts"
+    "test:r2": "tsx scripts/r2-acceptance.ts",
+    "package:azure": "node scripts/package-azure.mjs"
   },
   "keywords": [],
   "author": "",
@@ -39,9 +42,11 @@
     "echarts": "^6.1.0",
     "leaflet": "^1.9.4",
     "next": "^16.4.0",
+    "pdfjs-dist": "^6.4.299",
     "pg": "^8.23.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
+    "sharp": "^0.35.5",
     "zod": "^4.6.5"
   },
   "devDependencies": {
@@ -55,6 +60,7 @@
     "@types/react-dom": "^19.3.0",
     "drizzle-kit": "^0.31.11",
     "embedded-postgres": "^18.4.0-beta.17",
+    "esbuild": "^0.28.2",
     "eslint": "^9.39.5",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react-hooks": "^7.1.1",

@@ -11,6 +11,8 @@ export default tseslint.config(
       "playwright-report/**",
       "test-results/**",
       "next-env.d.ts",
+      "public/pdf.worker.min.mjs",
+      "public/pdfjs/**",
     ],
   },
   js.configs.recommended,

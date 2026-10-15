@@ -13,6 +13,7 @@ import {
 import { requireJob } from "@/lib/security";
 import { defaultReportPeriod, parseReportDay } from "@/lib/report-period";
 import { invoicePaid, readiness, usedBillable } from "./services";
+import { attendanceHistory } from "./attendance";
 const publicDocument = (document: typeof s.documents.$inferSelect) => {
   const { storageKey, ...doc } = document;
   void storageKey;
@@ -550,26 +551,20 @@ export async function readModule(
           .select({ log: s.audit, actorName: s.user.name })
           .from(s.audit)
           .innerJoin(s.user, eq(s.audit.actorId, s.user.id))
-          .where(
-            actor.roles.includes("director")
-              ? undefined
-              : eq(s.audit.entity, "user"),
-          )
           .orderBy(desc(s.audit.createdAt))
           .limit(500)
           .then((rows) =>
-            rows.map((r) => ({ ...r.log, actorName: r.actorName })),
+            rows.map((r) => ({
+              ...r.log,
+              ...(!actor.roles.includes("director") && r.log.entity !== "user"
+                ? { before: null, after: null, detailsRestricted: true }
+                : { detailsRestricted: false }),
+              actorName: r.actorName,
+            })),
           ),
       };
     case "attendance":
-      return {
-        rows: await db
-          .select()
-          .from(s.attendance)
-          .where(eq(s.attendance.userId, actor.id))
-          .orderBy(desc(s.attendance.checkIn))
-          .limit(100),
-      };
+      return attendanceHistory(actor);
     default:
       throw new DomainError("Halaman tidak ditemukan.", 404);
   }

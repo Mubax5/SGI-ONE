@@ -1,0 +1,3 @@
+ALTER TABLE "attendance_evidence" DROP CONSTRAINT "attendance_evidence_valid";--> statement-breakpoint
+ALTER TABLE "attendance_evidence" ADD COLUMN "captured_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "attendance_evidence" ADD CONSTRAINT "attendance_evidence_valid" CHECK ("attendance_evidence"."kind" IN ('in', 'out') AND "attendance_evidence"."lat" BETWEEN -90 AND 90 AND "attendance_evidence"."lng" BETWEEN -180 AND 180 AND "attendance_evidence"."accuracy" BETWEEN 0 AND 5000 AND "attendance_evidence"."distance" >= 0 AND "attendance_evidence"."size" BETWEEN 1 AND 5242880 AND "attendance_evidence"."mime_type" IN ('image/jpeg', 'image/png', 'image/webp'));

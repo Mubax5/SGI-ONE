@@ -9,27 +9,31 @@ const password = process.env.DEMO_PASSWORD;
 if (
   process.env.DEMO_SEED_ENABLED !== "true" ||
   !password ||
-  password.length < 12
+  password.length < 8
 )
   throw new Error(
-    "Enable DEMO_SEED_ENABLED=true and set DEMO_PASSWORD (12+ characters) to seed simulated accounts.",
+    "Enable DEMO_SEED_ENABLED=true and set DEMO_PASSWORD (8+ characters) to seed simulated accounts.",
   );
 const demoUsers: { email: string; name: string; roles: Actor["roles"] }[] = [
   {
-    email: "admin@sgi.demo",
-    name: "Administrator Demo",
+    email: "admin@sgilogistic.com",
+    name: "Fulan",
     roles: ["admin", "operations", "finance", "director", "sales"],
   },
   {
-    email: "operations@sgi.demo",
-    name: "Ratna Pramesti",
+    email: "operations@sgilogistic.com",
+    name: "Fulana",
     roles: ["operations"],
   },
-  { email: "field@sgi.demo", name: "Bima Saputra", roles: ["field"] },
-  { email: "field2@sgi.demo", name: "Dewi Anindita", roles: ["field"] },
-  { email: "finance@sgi.demo", name: "Nadia Kartika", roles: ["finance"] },
-  { email: "director@sgi.demo", name: "Arif Wibowo", roles: ["director"] },
-  { email: "sales@sgi.demo", name: "Rizky Pratama", roles: ["sales"] },
+  { email: "field@sgilogistic.com", name: "Fulan", roles: ["field"] },
+  { email: "field2@sgilogistic.com", name: "Fulana", roles: ["field"] },
+  { email: "finance@sgilogistic.com", name: "Fulana", roles: ["finance"] },
+  {
+    email: "director@sgilogistic.com",
+    name: "Septiandika Permana",
+    roles: ["director"],
+  },
+  { email: "sales@sgilogistic.com", name: "Fulan", roles: ["sales"] },
 ];
 try {
   await db
@@ -91,11 +95,11 @@ try {
       "Demo data already exists; existing transactions and passwords preserved.",
     );
   } else {
-    const ops = users["operations@sgi.demo"],
-      finance = users["finance@sgi.demo"],
-      sales = users["sales@sgi.demo"],
-      field = users["field@sgi.demo"],
-      field2 = users["field2@sgi.demo"];
+    const ops = users["operations@sgilogistic.com"],
+      finance = users["finance@sgilogistic.com"],
+      sales = users["sales@sgilogistic.com"],
+      field = users["field@sgilogistic.com"],
+      field2 = users["field2@sgilogistic.com"];
     const customer = await service.saveCustomer(ops, {
       name: "PT Maju Jaya (Simulasi)",
       contactName: "Sari Utami",
@@ -261,13 +265,44 @@ try {
       "Bogor",
       4,
     );
-    await service.recordAttendance(field, "in", {
-      note: "Check-in demo di gudang Bekasi.",
-    });
+    await db
+      .insert(s.attendance)
+      .values({
+        userId: field.id,
+        note: "Simulasi absensi lama — tanpa bukti GPS/foto.",
+      })
+      .onConflictDoNothing();
     console.log(
       "Realistic simulated demo seeded: combined invoice Rp5,500,000, partial payment Rp2,000,000, receivable Rp3,500,000. No fabricated verified documents.",
     );
   }
+  const [office] = await db
+    .select()
+    .from(s.attendanceSites)
+    .where(eq(s.attendanceSites.name, "SGI · Graha Anabatic"));
+  if (!office)
+    await db.insert(s.attendanceSites).values({
+      name: "SGI · Graha Anabatic",
+      label: "Graha Anabatic, Jalan Scientia Boulevard Kav. U2, Gading Serpong",
+      lat: -6.255527,
+      lng: 106.6198921,
+      radius: 200,
+      updatedBy: users["admin@sgilogistic.com"].id,
+    });
+  const [demoSite] = await db
+    .select()
+    .from(s.attendanceSites)
+    .where(eq(s.attendanceSites.name, "Gudang Bekasi (Simulasi)"));
+  if (!demoSite)
+    await db.insert(s.attendanceSites).values({
+      name: "Gudang Bekasi (Simulasi)",
+      label:
+        "Lokasi demo Gudang Bekasi — bukan lokasi kantor SGI yang terverifikasi",
+      lat: -6.2383,
+      lng: 106.9756,
+      radius: 200,
+      updatedBy: users["admin@sgilogistic.com"].id,
+    });
   // Approximate city points for the four explicitly synthetic demo jobs only.
   // Never overwrite a coordinate saved by Operations or infer real customer locations.
   const demoCoordinates: Record<string, [number, number]> = {
@@ -297,14 +332,14 @@ try {
           originLng: 106.9756,
           destinationLat: destination[0],
           destinationLng: destination[1],
-          updatedBy: users["operations@sgi.demo"].id,
+          updatedBy: users["operations@sgilogistic.com"].id,
         })
         .onConflictDoNothing()
         .returning();
       if (location)
         await service.log(
           tx,
-          users["operations@sgi.demo"],
+          users["operations@sgilogistic.com"],
           "job",
           job.id,
           "demo_location_seed",
@@ -317,7 +352,7 @@ try {
     "Demo map coordinates seeded without replacing existing locations.",
   );
   console.log(
-    "Demo accounts: admin, operations, field, field2, finance, director, sales @sgi.demo. Password: DEMO_PASSWORD in .env.",
+    "Demo accounts: admin, operations, field, field2, finance, director, sales @sgilogistic.com. Password: DEMO_PASSWORD in .env.",
   );
 } finally {
   await pool.end();

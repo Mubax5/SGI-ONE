@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import { WorkspaceLink as Link } from "./workspace-link";
 import { Banner, Button, LinkButton, Text } from "@cloudflare/kumo";
 import { CheckCircleIcon, PrinterIcon } from "@phosphor-icons/react";
 import { Actor, can, formatMoney } from "@/lib/domain";
@@ -54,15 +54,12 @@ export function InvoiceView({
           ) : (
             <span className="nav-tab-label">
               <CheckCircleIcon size={16} />
-              Semua syarat penerbitan telah terpenuhi.
+              Siap diterbitkan
             </span>
           )}
         </Banner>
       )}
-      <SectionPanel
-        title="Item tagihan"
-        description="Komponen biaya yang dialokasikan dari job pelanggan ini."
-      >
+      <SectionPanel title="Item tagihan">
         <DataTable
           rows={i.items}
           columns={[

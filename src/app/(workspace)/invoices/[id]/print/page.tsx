@@ -3,13 +3,23 @@ import { getActor } from "@/lib/security";
 import { invoices } from "@/modules/queries";
 import { formatMoney, DomainError } from "@/lib/domain";
 import { PrintButton } from "@/components/print-button";
+import {
+  scopedWorkspaceActor,
+  redirectLegacyWorkspace,
+} from "@/lib/workspace-server";
+import type { PageQuery } from "@/lib/workspace-url";
+import { z } from "zod";
 export default async function InvoicePrint({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<PageQuery>;
 }) {
-  const actor = await getActor();
   const { id } = await params;
+  redirectLegacyWorkspace(`/invoices/${id}/print`, await searchParams);
+  if (!z.uuid().safeParse(id).success) notFound();
+  const actor = await scopedWorkspaceActor(await getActor());
   let row;
   try {
     row = (await invoices(actor)).find(
@@ -109,10 +119,6 @@ export default async function InvoicePrint({
           <dd>{formatMoney(row.outstanding, row.currency)}</dd>
         </div>
       </dl>
-      <p className="text-kumo-subtle">
-        Dokumen prototype. Seluruh transaksi demo adalah simulasi. Data customer
-        merupakan snapshot saat invoice diterbitkan.
-      </p>
     </article>
   );
 }

@@ -3,6 +3,7 @@ import {
   PutObjectCommand,
   GetObjectCommand,
   DeleteObjectCommand,
+  HeadBucketCommand,
 } from "@aws-sdk/client-s3";
 import { DomainError } from "./domain";
 export function storageConfigured() {
@@ -13,10 +14,36 @@ export function storageConfigured() {
     "R2_BUCKET",
   ].every((k) => Boolean(process.env[k]));
 }
+export async function probeStorage() {
+  const checkedAt = new Date().toISOString();
+  if (!storageConfigured())
+    return {
+      status: "unconfigured" as const,
+      checkedAt,
+      message: "Layanan dokumen belum terhubung.",
+    };
+  try {
+    await storage().send(
+      new HeadBucketCommand({ Bucket: process.env.R2_BUCKET! }),
+      { abortSignal: AbortSignal.timeout(5000) },
+    );
+    return {
+      status: "healthy" as const,
+      checkedAt,
+      message: "Layanan dokumen terhubung.",
+    };
+  } catch {
+    return {
+      status: "error" as const,
+      checkedAt,
+      message: "Layanan dokumen gagal terhubung. Hubungi administrator.",
+    };
+  }
+}
 function storage() {
   if (!storageConfigured())
     throw new DomainError(
-      "Penyimpanan belum terhubung. Administrator perlu mengisi konfigurasi R2 di server, lalu restart aplikasi.",
+      "Layanan dokumen belum terhubung. Hubungi administrator.",
       503,
     );
   return new S3Client({
@@ -85,10 +112,7 @@ export async function putFile(key: string, type: string, data: Uint8Array) {
   } catch (e) {
     if (e instanceof DomainError) throw e;
     console.error("R2 upload failed", e instanceof Error ? e.name : "unknown");
-    throw new DomainError(
-      "Unggah ke R2 gagal. Coba kembali; dokumen belum disimpan.",
-      502,
-    );
+    throw new DomainError("Dokumen belum diunggah. Coba lagi.", 502);
   }
 }
 export async function deleteFile(key: string) {
@@ -110,7 +134,7 @@ export async function getFile(key: string) {
       e instanceof Error ? e.name : "unknown",
     );
     throw new DomainError(
-      "Dokumen tidak dapat diambil dari R2. Coba lagi atau hubungi Operations.",
+      "Dokumen tidak dapat diunduh. Coba lagi atau hubungi Operations.",
       502,
     );
   }

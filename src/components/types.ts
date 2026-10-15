@@ -40,6 +40,7 @@ export type UserRow = {
 };
 export type AuditRow = Serialized<typeof schema.audit.$inferSelect> & {
   actorName: string;
+  detailsRestricted?: boolean;
 };
 export type Attendance = Serialized<typeof schema.attendance.$inferSelect>;
 export type Dashboard = Serialized<DashboardData>;

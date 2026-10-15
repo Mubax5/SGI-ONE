@@ -34,6 +34,8 @@ export const permissions = {
   reportsRead: ["director", "operations", "field"],
   audit: ["director", "admin"],
   users: ["admin"],
+  attendanceSelf: ["director", "operations", "field", "finance", "sales"],
+  attendanceMonitor: ["director", "operations"],
   quotationsRead: ["director", "operations", "finance", "sales"],
   quotationsWrite: ["sales", "finance"],
   quotationsApprove: ["finance"],

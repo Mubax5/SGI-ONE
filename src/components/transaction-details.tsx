@@ -22,7 +22,7 @@ export function PaymentView({ payment: p }: { payment: Payment }) {
               value: formatMoney(p.allocated, p.currency),
             },
             {
-              label: "Credit belum dialokasi",
+              label: "Saldo belum dialokasikan",
               value: formatMoney(p.unapplied, p.currency),
             },
             { label: "Diterima", value: dateText(p.receivedAt, true) },
@@ -31,13 +31,10 @@ export function PaymentView({ payment: p }: { payment: Payment }) {
           ]}
         />
       </SectionPanel>
-      <SectionPanel
-        title="Alokasi pembayaran"
-        description="Nominal penerimaan yang sudah diterapkan ke masing-masing invoice."
-      >
+      <SectionPanel title="Alokasi pembayaran">
         <DataTable
           rows={p.allocations}
-          empty="Belum ada alokasi. Gunakan Alokasikan dari daftar pembayaran untuk menerapkan credit ke invoice."
+          empty="Pilih Alokasikan pada daftar pembayaran untuk menautkan invoice."
           columns={[
             { title: "Invoice", render: (r) => r.number ?? "—" },
             {
@@ -78,55 +75,62 @@ export function AuditView({ audit: a }: { audit: AuditRow }) {
           { label: "ID catatan", value: a.entityId },
         ]}
       />
-      <Banner
-        variant="secondary"
-        description="Riwayat ini tersimpan sebagai catatan audit dan tidak dapat diubah."
-      />
-      <Tabs
-        value={tab}
-        onValueChange={setTab}
-        tabs={[
-          { value: "comparison", label: "Perubahan data" },
-          { value: "source", label: "Data lengkap" },
-        ]}
-      />
-      {tab === "comparison" ? (
-        <DataTable
-          rows={rows}
-          empty="Tindakan ini tidak mengubah rincian data."
-          columns={[
-            { title: "Field", render: (r) => r.id },
-            {
-              title: "Sebelum",
-              render: (r) => (
-                <pre className="audit-value">{display(r.before)}</pre>
-              ),
-            },
-            {
-              title: "Sesudah",
-              render: (r) => (
-                <pre className="audit-value">{display(r.after)}</pre>
-              ),
-            },
-          ]}
+      {a.detailsRestricted ? (
+        <Banner
+          variant="secondary"
+          description="Anda tidak memiliki akses ke rincian transaksi ini."
         />
       ) : (
-        <div className="audit-snapshots">
-          <div>
-            <Text as="h3" variant="heading">
-              Sebelum
-            </Text>
-            <pre className="audit-json">
-              {JSON.stringify(a.before, null, 2)}
-            </pre>
-          </div>
-          <div>
-            <Text as="h3" variant="heading">
-              Sesudah
-            </Text>
-            <pre className="audit-json">{JSON.stringify(a.after, null, 2)}</pre>
-          </div>
-        </div>
+        <>
+          <Tabs
+            value={tab}
+            onValueChange={setTab}
+            tabs={[
+              { value: "comparison", label: "Perubahan data" },
+              { value: "source", label: "Data lengkap" },
+            ]}
+          />
+          {tab === "comparison" ? (
+            <DataTable
+              rows={rows}
+              empty="Tindakan ini tidak mengubah rincian data."
+              columns={[
+                { title: "Kolom", render: (r) => r.id },
+                {
+                  title: "Sebelum",
+                  render: (r) => (
+                    <pre className="audit-value">{display(r.before)}</pre>
+                  ),
+                },
+                {
+                  title: "Sesudah",
+                  render: (r) => (
+                    <pre className="audit-value">{display(r.after)}</pre>
+                  ),
+                },
+              ]}
+            />
+          ) : (
+            <div className="audit-snapshots">
+              <div>
+                <Text as="h3" variant="heading">
+                  Sebelum
+                </Text>
+                <pre className="audit-json">
+                  {JSON.stringify(a.before, null, 2)}
+                </pre>
+              </div>
+              <div>
+                <Text as="h3" variant="heading">
+                  Sesudah
+                </Text>
+                <pre className="audit-json">
+                  {JSON.stringify(a.after, null, 2)}
+                </pre>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

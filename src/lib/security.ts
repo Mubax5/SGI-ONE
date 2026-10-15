@@ -14,8 +14,7 @@ export async function getActor(requestHeaders?: Headers): Promise<Actor> {
   const result = await auth.api.getSession({
     headers: requestHeaders ?? (await headers()),
   });
-  if (!result)
-    throw new DomainError("Sesi telah berakhir. Silakan masuk kembali.", 401);
+  if (!result) throw new DomainError("Sesi berakhir. Masuk kembali.", 401);
   const [profile] = await db
     .select()
     .from(user)

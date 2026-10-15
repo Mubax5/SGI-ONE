@@ -5,9 +5,16 @@ import { can, Permission } from "@/lib/domain";
 import type { ModuleKey } from "@/components/types";
 import { RoleDashboard } from "@/components/role-dashboard";
 import { ReportsPage } from "@/components/reports";
-import { workspaceRole } from "@/lib/workspace";
+import { analyticsRoles } from "@/lib/workspace";
+import {
+  activeWorkspace,
+  redirectLegacyWorkspace,
+} from "@/lib/workspace-server";
+import { AppErrorState } from "@/components/app-error-state";
+import { SystemPage } from "@/components/system-overview";
 import { Homepage } from "@/components/homepage";
 import { JobMap } from "@/components/job-map";
+import { AttendancePage } from "@/components/attendance-page";
 const modules: Record<string, Permission | null> = {
   dashboard: "dashboard",
   home: "dashboard",
@@ -22,9 +29,10 @@ const modules: Record<string, Permission | null> = {
   billing: "billingRead",
   invoices: "invoicesRead",
   payments: "paymentsRead",
-  attendance: null,
+  attendance: "attendanceSelf",
   users: "users",
   audit: "audit",
+  system: "users",
 };
 export default async function ModulePage({
   params,
@@ -35,42 +43,32 @@ export default async function ModulePage({
 }) {
   const { module } = await params;
   if (!Object.hasOwn(modules, module)) notFound();
-  const actor = await getActor();
+  const identity = await getActor();
   const query = await searchParams;
+  redirectLegacyWorkspace(`/${module}`, query);
   const value = (key: string) =>
     typeof query[key] === "string" ? (query[key] as string) : "";
   const permission = modules[module];
+  const role = await activeWorkspace(identity);
+  const actor = { ...identity, roles: [role] };
   if (permission && !can(actor, permission))
-    return (
-      <div className="empty">
-        <h1>Akses terbatas</h1>
-        <p>
-          Role Anda tidak memiliki izin untuk halaman ini. Gunakan navigasi yang
-          tersedia atau hubungi administrator.
-        </p>
-      </div>
-    );
+    return <AppErrorState kind="forbidden" />;
   if (module === "home" || module === "dashboard")
-    return (
-      <Homepage
-        key={value("role") || "default"}
-        actor={actor}
-        role={workspaceRole(actor, value("role"))}
-      />
-    );
-  if (module === "maps") return <JobMap actor={actor} />;
+    return <Homepage key={role} actor={identity} role={role} />;
+  if (module === "maps") return <JobMap key={role} actor={actor} />;
+  if (module === "attendance")
+    return <AttendancePage key={role} actor={actor} />;
+  if (module === "system") return <SystemPage />;
   if (module === "analytics")
-    return (
-      <RoleDashboard
-        key={value("role") || "default"}
-        actor={actor}
-        role={workspaceRole(actor, value("role"))}
-      />
+    return analyticsRoles.includes(role) ? (
+      <RoleDashboard key={role} actor={identity} role={role} />
+    ) : (
+      <AppErrorState kind="forbidden" />
     );
   if (module === "reports")
     return (
       <ReportsPage
-        key={JSON.stringify(query)}
+        key={JSON.stringify([role, query])}
         actor={actor}
         createOnLoad={value("create") === "1"}
         initialSearch={value("q")}
@@ -79,7 +77,7 @@ export default async function ModulePage({
     );
   return (
     <Workbench
-      key={JSON.stringify(query)}
+      key={JSON.stringify([role, query])}
       module={module as ModuleKey}
       actor={actor}
       createOnLoad={value("create") === "1"}

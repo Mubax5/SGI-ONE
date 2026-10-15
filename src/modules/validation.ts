@@ -120,7 +120,7 @@ export const correctionInput = z.object({
 export const userInput = z.object({
   name: text,
   email: z.email(),
-  password: z.string().min(12).max(128),
+  password: z.string().min(8).max(128),
   roles: z.array(z.enum(roleKeys)).min(1).max(6),
 });
 export const roleInput = z.object({
@@ -142,8 +142,5 @@ export const deliveryInput = z.object({
   quantity: z.number().int().positive().max(1000000),
   deliveredAt: date,
   note: z.string().trim().max(2000).default(""),
-});
-export const attendanceInput = z.object({
-  note: z.string().trim().max(500).default(""),
 });
 export const identifier = id;

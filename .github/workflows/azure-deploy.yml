@@ -1,0 +1,72 @@
+name: Deploy SGI One to Azure
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: azure-sgi-one-production
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm run package:azure
+      - name: Package compiled application
+        working-directory: artifacts/azure/app
+        run: zip -qr ../sgi-one.zip .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sgi-one-azure
+          path: artifacts/azure/sgi-one.zip
+          retention-days: 3
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: sgi-one-azure
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - uses: azure/webapps-deploy@v3
+        id: publish
+        with:
+          app-name: sgi-one-pipel7eres
+          package: sgi-one.zip
+          startup-command: node start-azure.mjs
+      - name: Verify application and database readiness
+        env:
+          SITE_URL: ${{ steps.publish.outputs.webapp-url }}
+        run: |
+          for attempt in $(seq 1 36); do
+            if curl --fail --silent --show-error --max-time 15 "$SITE_URL/api/health"; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Application did not become ready after deployment."
+          exit 1

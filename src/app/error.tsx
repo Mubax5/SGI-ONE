@@ -1,12 +1,11 @@
 "use client";
-import { Empty, Button } from "@cloudflare/kumo";
-export default function ErrorPage({ reset }: { reset: () => void }) {
+import { AppErrorState } from "@/components/app-error-state";
+export default function ErrorPage() {
   return (
-    <Empty
-      className="empty"
-      title="Aplikasi belum dapat memuat data"
-      description="Periksa koneksi server, lalu coba kembali."
-      contents={<Button onClick={reset}>Coba kembali</Button>}
+    <AppErrorState
+      kind="error"
+      fullPage
+      onRetry={() => window.location.reload()}
     />
   );
 }

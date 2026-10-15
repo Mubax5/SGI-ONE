@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import { hashPassword } from "better-auth/crypto";
 import { db, Transaction } from "@/db";
 import * as s from "@/db/schema";
@@ -983,45 +983,5 @@ export async function changeRoles(actor: Actor, id: string, input: unknown) {
       { roles: prev.map((r) => r.role), active: row.active },
       data,
     );
-  });
-}
-export async function recordAttendance(
-  actor: Actor,
-  kind: "in" | "out",
-  input: unknown,
-) {
-  const data = v.attendanceInput.parse(input);
-  return db.transaction(async (tx) => {
-    await tx.select().from(s.user).where(eq(s.user.id, actor.id)).for("update");
-    const [open] = await tx
-      .select()
-      .from(s.attendance)
-      .where(
-        and(eq(s.attendance.userId, actor.id), isNull(s.attendance.checkOut)),
-      )
-      .for("update");
-    if (kind === "in") {
-      if (open)
-        throw new DomainError(
-          "Anda sudah check-in. Check-out terlebih dahulu.",
-        );
-      const [row] = await tx
-        .insert(s.attendance)
-        .values({ userId: actor.id, note: data.note })
-        .returning();
-      await log(tx, actor, "attendance", row.id, "check_in");
-      return row;
-    }
-    if (!open) throw new DomainError("Belum ada check-in aktif.");
-    const [row] = await tx
-      .update(s.attendance)
-      .set({
-        checkOut: new Date(),
-        note: [open.note, data.note].filter(Boolean).join(" · "),
-      })
-      .where(eq(s.attendance.id, open.id))
-      .returning();
-    await log(tx, actor, "attendance", row.id, "check_out");
-    return row;
   });
 }

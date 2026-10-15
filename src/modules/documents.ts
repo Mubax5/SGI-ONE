@@ -69,7 +69,11 @@ export async function uploadDocument(
     throw e;
   }
 }
-export async function downloadDocument(actor: Actor, id: string) {
+export async function downloadDocument(
+  actor: Actor,
+  id: string,
+  preview = false,
+) {
   const [doc] = await db
     .select()
     .from(s.documents)
@@ -79,12 +83,12 @@ export async function downloadDocument(actor: Actor, id: string) {
   const bytes = await getFile(doc.storageKey);
   await db.transaction(async (tx) => {
     await requireJob(actor, doc.jobId, "documentsRead", tx);
-    await log(tx, actor, "document", id, "download");
+    await log(tx, actor, "document", id, preview ? "preview" : "download");
   });
   return new Response(Buffer.from(bytes), {
     headers: {
       "Content-Type": doc.mimeType,
-      "Content-Disposition": `attachment; filename="document${allowedFiles[doc.mimeType]}"; filename*=UTF-8''${encodeURIComponent(doc.filename)}`,
+      "Content-Disposition": `${preview ? "inline" : "attachment"}; filename="document${allowedFiles[doc.mimeType]}"; filename*=UTF-8''${encodeURIComponent(doc.filename)}`,
       "Cache-Control": "private, no-store",
       "X-Content-Type-Options": "nosniff",
     },

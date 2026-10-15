@@ -222,8 +222,10 @@ export const jobLocations = pgTable(
       .references(() => jobs.id),
     originLat: doublePrecision("origin_lat").notNull(),
     originLng: doublePrecision("origin_lng").notNull(),
+    originLabel: text("origin_label"),
     destinationLat: doublePrecision("destination_lat").notNull(),
     destinationLng: doublePrecision("destination_lng").notNull(),
+    destinationLabel: text("destination_label"),
     updatedBy: text("updated_by")
       .notNull()
       .references(() => user.id),
@@ -485,11 +487,82 @@ export const attendance = pgTable(
     checkIn: at("check_in"),
     checkOut: timestamp("check_out", { withTimezone: true }),
     note: text("note").notNull(),
+    workMode: text("work_mode").notNull().default("onsite"),
+    reviewStatus: text("review_status").notNull().default("unreviewed"),
+    reviewedBy: text("reviewed_by").references(() => user.id),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    reviewNote: text("review_note"),
   },
   (t) => [
+    check(
+      "attendance_mode_review_valid",
+      sql`${t.workMode} IN ('onsite','wfh','visit') AND ${t.reviewStatus} IN ('unreviewed','validated','pending','approved','rejected')`,
+    ),
     uniqueIndex("one_open_attendance")
       .on(t.userId)
       .where(sql`${t.checkOut} IS NULL`),
+  ],
+);
+export const attendanceCameraTokens = pgTable("attendance_camera_tokens", {
+  id: id(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id),
+  createdAt: at("created_at"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+});
+export const attendanceSites = pgTable(
+  "attendance_sites",
+  {
+    id: id(),
+    name: text("name").notNull(),
+    label: text("label").notNull(),
+    lat: doublePrecision("lat").notNull(),
+    lng: doublePrecision("lng").notNull(),
+    radius: integer("radius").notNull().default(200),
+    active: boolean("active").notNull().default(true),
+    updatedBy: text("updated_by")
+      .notNull()
+      .references(() => user.id),
+    updatedAt: at("updated_at"),
+  },
+  (t) => [
+    check(
+      "attendance_site_bounds",
+      sql`${t.lat} BETWEEN -90 AND 90 AND ${t.lng} BETWEEN -180 AND 180 AND ${t.radius} BETWEEN 50 AND 2000`,
+    ),
+  ],
+);
+export const attendanceEvidence = pgTable(
+  "attendance_evidence",
+  {
+    id: id(),
+    attendanceId: text("attendance_id")
+      .notNull()
+      .references(() => attendance.id),
+    kind: text("kind").notNull(),
+    targetKey: text("target_key").notNull(),
+    target: jsonb("target")
+      .$type<{ label: string; lat: number; lng: number; radius: number }>()
+      .notNull(),
+    lat: doublePrecision("lat").notNull(),
+    lng: doublePrecision("lng").notNull(),
+    accuracy: doublePrecision("accuracy").notNull(),
+    distance: doublePrecision("distance").notNull(),
+    sampledAt: timestamp("sampled_at", { withTimezone: true }).notNull(),
+    capturedAt: timestamp("captured_at", { withTimezone: true }),
+    createdAt: at("created_at"),
+    storageKey: text("storage_key").notNull(),
+    mimeType: text("mime_type").notNull(),
+    size: integer("size").notNull(),
+  },
+  (t) => [
+    uniqueIndex("attendance_evidence_kind_unique").on(t.attendanceId, t.kind),
+    check(
+      "attendance_evidence_valid",
+      sql`${t.kind} IN ('in', 'out') AND ${t.lat} BETWEEN -90 AND 90 AND ${t.lng} BETWEEN -180 AND 180 AND ${t.accuracy} BETWEEN 0 AND 5000 AND ${t.distance} >= 0 AND ${t.size} BETWEEN 1 AND 5242880 AND ${t.mimeType} IN ('image/jpeg', 'image/png', 'image/webp')`,
+    ),
   ],
 );
 export const audit = pgTable(

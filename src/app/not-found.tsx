@@ -1,15 +1,4 @@
-import { Empty, LinkButton } from "@cloudflare/kumo";
+import { AppErrorState } from "@/components/app-error-state";
 export default function NotFound() {
-  return (
-    <Empty
-      className="empty"
-      title="Halaman tidak ditemukan"
-      description="Data tidak tersedia atau belum ditugaskan kepada Anda."
-      contents={
-        <LinkButton href="/" variant="primary">
-          Kembali ke workspace
-        </LinkButton>
-      }
-    />
-  );
+  return <AppErrorState kind="not-found" fullPage />;
 }

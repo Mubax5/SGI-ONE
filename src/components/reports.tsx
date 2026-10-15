@@ -21,6 +21,7 @@ import type { reports } from "@/modules/reports";
 import type { Serialized } from "./types";
 import { api, dateText, Feedback, Modal, SectionPanel } from "./shared";
 import { LoadingState, PageHeader } from "./workspace-ui";
+import { useLiveRevision } from "@/lib/live-data";
 type ReportData = Serialized<Awaited<ReturnType<typeof reports>>>;
 export function ReportsPage({
   actor,
@@ -33,6 +34,7 @@ export function ReportsPage({
   initialSearch?: string;
   initialJob?: string;
 }) {
+  const liveRevision = useLiveRevision();
   const [data, setData] = useState<ReportData>();
   const [search, setSearch] = useState(initialSearch);
   const [error, setError] = useState("");
@@ -58,7 +60,7 @@ export function ReportsPage({
     return () => {
       active = false;
     };
-  }, []);
+  }, [liveRevision]);
   useEffect(
     () => () => {
       if (preview) URL.revokeObjectURL(preview);
@@ -99,7 +101,7 @@ export function ReportsPage({
       setOpen(false);
       setNote("");
       choosePhoto(undefined);
-      setSuccess("Laporan tersimpan dan tercatat pada progres pekerjaan.");
+      setSuccess("Laporan tersimpan.");
       try {
         setData(await api<ReportData>("data/reports"));
       } catch {
@@ -124,8 +126,7 @@ export function ReportsPage({
     <>
       <PageHeader
         title="Laporan pekerjaan"
-        context="Aktivitas lapangan"
-        description="Catatan dan foto privat, terhubung langsung ke progres job."
+
         actions={
           can(actor, "jobsProgress") && (
             <Button
@@ -155,7 +156,7 @@ export function ReportsPage({
             Muat ulang laporan
           </Button>
         ) : (
-          <LoadingState text="Memuat laporan yang dapat Anda akses…" />
+          <LoadingState text="Memuat laporan…" />
         )
       ) : !rows.length ? (
         <Empty
@@ -208,7 +209,6 @@ export function ReportsPage({
           if (!busy) setOpen(false);
         }}
         title="Buat laporan pekerjaan"
-        description="Pilih job, jelaskan pekerjaan, dan tambahkan foto bila diperlukan."
       >
         <form className="report-editor" onSubmit={submit}>
           <Feedback error={error} />
@@ -254,14 +254,14 @@ export function ReportsPage({
                 required
                 minLength={5}
                 maxLength={2000}
-                description="Jelaskan pekerjaan yang selesai, kendala, dan tindak lanjut."
+                description="Pekerjaan selesai, kendala, dan tindak lanjut."
               />
               <Input
                 label="Foto laporan"
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 capture="environment"
-                description="JPG, PNG, atau WebP; maksimal 10 MB. Foto disimpan privat."
+                description="JPG, PNG, atau WebP; maksimal 10 MB."
                 onChange={(e) => choosePhoto(e.target.files?.[0])}
                 key={fileReset}
               />
@@ -312,7 +312,7 @@ export function ReportsPage({
         description={
           photoReport
             ? `${photoReport.jobNumber} · ${photoReport.actorName}`
-            : "Lampiran privat pekerjaan"
+            : "Foto laporan"
         }
       >
         <div className="report-photo-body">
@@ -321,7 +321,7 @@ export function ReportsPage({
               <Feedback error="Foto tidak dapat dimuat. Tutup dan buka kembali; hubungi Operations jika masih gagal." />
             ) : (
               <Image
-                src={`/api/reports/${photoReport.id}/photo`}
+                src={`/api/reports/${photoReport.id}/photo?role=${actor.roles[0]}`}
                 alt={`Foto pekerjaan ${photoReport.jobNumber}`}
                 width={1000}
                 height={750}

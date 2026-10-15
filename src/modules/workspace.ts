@@ -12,8 +12,9 @@ import {
   scopedJobs,
 } from "./queries";
 import { reports } from "./reports";
+import { systemHealth } from "./system";
 
-export async function workspaceDashboard(
+async function loadWorkspaceDashboard(
   actor: Actor,
   requested?: string | null,
   from?: string,
@@ -23,8 +24,19 @@ export async function workspaceDashboard(
   // Choosing a workspace narrows the actor; it can never grant another role.
   const scoped: Actor = { ...actor, roles: [role] };
   switch (role) {
-    case "director":
-      return { role, ...(await dashboard(scoped, from, to)) };
+    case "director": {
+      const [summary, jobs, invoiceRows, paymentRows] = await Promise.all([
+        dashboard(scoped, from, to),
+        scopedJobs(scoped),
+        invoices(scoped),
+        payments(scoped),
+      ]);
+      return {
+        role,
+        ...summary,
+        analytics: { jobs, invoices: invoiceRows, payments: paymentRows },
+      };
+    }
     case "operations": {
       const [jobs, activity] = await Promise.all([
         scopedJobs(scoped),
@@ -104,7 +116,7 @@ export async function workspaceDashboard(
       };
     }
     case "admin": {
-      const [users, roles, audit] = await Promise.all([
+      const [users, roles, audit, system] = await Promise.all([
         db
           .select({
             id: s.user.id,
@@ -127,6 +139,7 @@ export async function workspaceDashboard(
           .where(eq(s.audit.entity, "user"))
           .orderBy(desc(s.audit.createdAt))
           .limit(10),
+        systemHealth(scoped),
       ]);
       return {
         role,
@@ -135,8 +148,18 @@ export async function workspaceDashboard(
           roles: roles.filter((r) => r.userId === user.id).map((r) => r.role),
         })),
         audit,
+        system,
       };
     }
   }
+}
+export async function workspaceDashboard(
+  actor: Actor,
+  requested?: string | null,
+  from?: string,
+  to?: string,
+) {
+  const data = await loadWorkspaceDashboard(actor, requested, from, to);
+  return { ...data, asOf: new Date().toISOString() };
 }
 export type WorkspaceData = Awaited<ReturnType<typeof workspaceDashboard>>;

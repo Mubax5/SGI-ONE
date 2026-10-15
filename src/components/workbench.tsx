@@ -1,14 +1,27 @@
 "use client";
-import Link from "next/link";
-import { Button, Input, LayerCard, Select } from "@cloudflare/kumo";
+import { ToolbarAction } from "./toolbar-action";
+import { WorkspaceLink as Link } from "./workspace-link";
+import { Button, LayerCard } from "@cloudflare/kumo";
 import {
   PlusIcon,
   ArrowRightIcon,
+  ArrowClockwiseIcon,
   DownloadSimpleIcon,
   MagnifyingGlassIcon,
+  EyeIcon,
+  PencilSimpleIcon,
+  GearSixIcon,
 } from "@phosphor-icons/react";
 import { ReactNode, useCallback, useEffect, useState } from "react";
-import { Actor, can, formatMoney, roleLabels, checklists } from "@/lib/domain";
+import {
+  Actor,
+  can,
+  formatMoney,
+  roleLabels,
+  checklists,
+  services,
+  documentTypes,
+} from "@/lib/domain";
 import {
   api,
   DataTable,
@@ -16,7 +29,6 @@ import {
   Feedback,
   filterRows,
   Modal,
-  Refresh,
   Status,
 } from "./shared";
 import { Editor, EditorMode } from "./editor";
@@ -27,7 +39,6 @@ import { InvoiceView } from "./invoice-detail";
 import { AuditView, PaymentView } from "./transaction-details";
 import { PageHeader, CollectionPanel, LoadingState } from "./workspace-ui";
 import type {
-  Attendance,
   AuditRow,
   Billable,
   Customer,
@@ -46,7 +57,6 @@ const meta: Record<
   ModuleKey,
   {
     title: string;
-    description: string;
     action?: string;
     mode?: EditorMode;
     endpoint?: string;
@@ -54,88 +64,75 @@ const meta: Record<
 > = {
   dashboard: {
     title: "Dashboard",
-    description: "Posisi operasional dan piutang, langsung dari transaksi.",
   },
   customers: {
     title: "Customer",
-    description: "Kontak, alamat penagihan, dan relasi pelanggan SGI.",
     action: "Tambah customer",
     mode: "customer",
     endpoint: "customers",
   },
   requests: {
     title: "Permintaan order",
-    description: "Kebutuhan pelanggan yang akan diteruskan menjadi pekerjaan.",
     action: "Catat permintaan",
     mode: "request",
     endpoint: "requests",
   },
   quotations: {
     title: "Penawaran & kontrak",
-    description:
-      "Dasar tarif dan persetujuan termin. Setiap revisi tetap dapat ditelusuri.",
     action: "Buat penawaran",
     mode: "quotation",
     endpoint: "quotations",
   },
   jobs: {
     title: "Job order",
-    description:
-      "Pantau PIC, progres pekerjaan, tenggat, dan kesiapan dokumen.",
     action: "Buat job order",
     mode: "job",
     endpoint: "jobs",
   },
   documents: {
     title: "Dokumen & review",
-    description:
-      "Bukti lapangan privat, versi dokumen, dan keputusan Operations.",
   },
   billing: {
     title: "Komponen tagihan",
-    description:
-      "Tarif disetujui, saldo tersedia, serta syarat penerbitan per pekerjaan.",
     action: "Tambah komponen",
     mode: "billable",
     endpoint: "billables",
   },
   invoices: {
     title: "Invoice",
-    description:
-      "Draft fleksibel dari beberapa job, dengan validasi saat penerbitan.",
     action: "Buat draft invoice",
     mode: "draft",
     endpoint: "invoices",
   },
   payments: {
     title: "Pembayaran",
-    description: "Penerimaan pelanggan, alokasi invoice, dan unapplied credit.",
     action: "Catat pembayaran",
     mode: "payment",
     endpoint: "payments",
   },
   attendance: {
     title: "Absensi saya",
-    description: "Check-in dan check-out menggunakan waktu server.",
   },
   users: {
     title: "Pengguna & akses",
-    description:
-      "Kelola akun internal dan role. Perubahan berlaku pada request berikutnya.",
     action: "Tambah pengguna",
     mode: "user",
     endpoint: "users",
   },
   audit: {
     title: "Audit trail",
-    description:
-      "500 aktivitas terakhir. Riwayat bersifat append-only dan tidak dapat diedit.",
   },
 };
+import { useLiveRevision, workspaceHeaders } from "@/lib/live-data";
+import { CollectionToolbar } from "./collection-toolbar";
+import { RowActions } from "./row-actions";
+import { RecordActionButton } from "./record-action-button";
+import { DocumentPreview } from "./document-preview";
+import { FilterButtons } from "./filter-buttons";
 type Payload = FormDataSources & { rows?: unknown[] };
 type EditState = {
   title: string;
-  description: string;
+  description?: string;
   mode: EditorMode;
   endpoint: string;
   initial?: Record<string, unknown>;
@@ -155,11 +152,18 @@ export function Workbench({
   initialRecord?: string;
   initialStatus?: string;
 }) {
+  const liveRevision = useLiveRevision();
   const [payload, setPayload] = useState<Payload | Dashboard>({ rows: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [preview, setPreview] = useState<{
+    id: string;
+    filename: string;
+  } | null>(null);
   const [search, setSearch] = useState(initialSearch);
+  const [facet, setFacet] = useState("all"),
+    [age, setAge] = useState("all");
   const [status, setStatus] = useState(() => {
     const options: Partial<Record<ModuleKey, string[]>> = {
       jobs: ["draft", "assigned", "in_progress", "completed", "cancelled"],
@@ -239,7 +243,6 @@ export function Workbench({
               title: config.action!,
               mode: config.mode,
               endpoint: config.endpoint,
-              description: "Data divalidasi dan perubahan dicatat dalam audit.",
             });
             setAutoOpened(true);
           }
@@ -272,9 +275,94 @@ export function Workbench({
     return () => {
       active = false;
     };
-  }, [module, range, actor, autoOpened, createOnLoad, initialRecord, config]);
+  }, [
+    module,
+    range,
+    actor,
+    autoOpened,
+    createOnLoad,
+    initialRecord,
+    config,
+    liveRevision,
+  ]);
   const data = payload as Payload;
-  const rows = data.rows ?? [];
+  const sourceRows = (data.rows ?? []) as Record<string, unknown>[];
+  const facetKey =
+    module === "jobs" || module === "requests"
+      ? "serviceType"
+      : ["billing", "invoices", "payments", "quotations"].includes(module)
+        ? "currency"
+        : module === "documents"
+          ? "type"
+          : module === "audit"
+            ? "entity"
+            : module === "users"
+              ? "roles"
+              : "contact";
+  const facetLabel =
+    facetKey === "serviceType"
+      ? "Layanan"
+      : facetKey === "currency"
+        ? "Mata uang"
+        : facetKey === "type"
+          ? "Jenis dokumen"
+          : facetKey === "roles"
+            ? "Peran"
+            : facetKey === "entity"
+              ? "Objek aktivitas"
+              : "Kontak";
+  const facetValues =
+    facetKey === "contact"
+      ? ["complete", "incomplete"]
+      : [
+          ...new Set(
+            sourceRows.flatMap((r) =>
+              Array.isArray(r[facetKey])
+                ? (r[facetKey] as string[])
+                : r[facetKey]
+                  ? [String(r[facetKey])]
+                  : [],
+            ),
+          ),
+        ];
+  const facetItems = {
+    all: "Semua",
+    ...Object.fromEntries(
+      facetValues.map((v) => [
+        v,
+        facetKey === "roles"
+          ? roleLabels[v as keyof typeof roleLabels] || v
+          : v === "complete"
+            ? "Email & telepon"
+            : v === "incomplete"
+              ? "Kontak belum lengkap"
+              : (services as Record<string, string>)[v] ||
+                (documentTypes as Record<string, string>)[v] ||
+                v.replaceAll("_", " "),
+      ]),
+    ),
+  };
+  const rows = sourceRows.filter((r) => {
+    const matches =
+      facet === "all" ||
+      (facetKey === "contact"
+        ? (!!r.email && !!r.phone) === (facet === "complete")
+        : Array.isArray(r[facetKey])
+          ? (r[facetKey] as string[]).includes(facet)
+          : String(r[facetKey]) === facet);
+    const timestamp = r.receivedAt || r.createdAt || r.checkIn;
+    return (
+      matches &&
+      (age === "all" ||
+        (!!timestamp &&
+          Date.now() - new Date(String(timestamp)).getTime() <=
+            Number(age) * 86400000))
+    );
+  });
+  const latestView = view
+    ? (rows.find((row) => (row as { id: string }).id === view.id) as
+        Invoice | Payment | AuditRow | undefined)
+    : undefined;
   const sources: FormDataSources = {
     ...data,
     ...(module === "requests" ? { requests: rows as OrderRequest[] } : {}),
@@ -284,8 +372,11 @@ export function Workbench({
     mode: EditorMode,
     endpoint: string,
     initial?: Record<string, unknown>,
-    description = "Data divalidasi dan perubahan dicatat dalam audit.",
-  ) => setEdit({ title, mode, endpoint, initial, description });
+    description = "",
+  ) => {
+    setSuccess("");
+    setEdit({ title, mode, endpoint, initial, description });
+  };
   let allowCreate = false;
   if (module === "customers") allowCreate = can(actor, "customersWrite");
   if (module === "requests") allowCreate = can(actor, "requestsWrite");
@@ -297,13 +388,12 @@ export function Workbench({
   if (module === "users") allowCreate = can(actor, "users");
   const bySearch = <T,>(list: T[], label: (r: T) => string) =>
     filterRows(list, search, label);
-  const actions = (...nodes: ReactNode[]) => (
-    <div className="row-actions">{nodes}</div>
-  );
+  const actions = (...nodes: ReactNode[]) => <RowActions>{nodes}</RowActions>;
   const money = (value: number, currency: string) => (
     <span className="money">{formatMoney(value, currency)}</span>
   );
   let content: ReactNode;
+  let visibleRows: unknown[] = rows;
   let filters: Record<string, string> | undefined;
   switch (module) {
     case "customers": {
@@ -316,6 +406,7 @@ export function Workbench({
         rows as Customer[],
         (r) => `${r.name} ${r.contactName} ${r.email} ${r.phone}`,
       ).filter((r) => status === "all" || r.active === (status === "active"));
+      visibleRows = list;
       content = (
         <DataTable
           rows={list}
@@ -350,16 +441,15 @@ export function Workbench({
               title: "",
               render: (r) =>
                 can(actor, "customersWrite") && (
-                  <Button
-                    size="sm"
+                  <RecordActionButton
+                    label="Ubah"
+                    icon={PencilSimpleIcon}
                     onClick={() =>
                       open("Ubah customer", "customer", `customers/${r.id}`, {
                         ...r,
                       })
                     }
-                  >
-                    Ubah
-                  </Button>
+                  />
                 ),
             },
           ]}
@@ -381,6 +471,7 @@ export function Workbench({
         (r) =>
           `${r.number} ${r.customerName} ${r.origin} ${r.destination} ${r.picName}`,
       ).filter((r) => status === "all" || r.status === status);
+      visibleRows = list;
       content = (
         <>
           <div className="context-strip">
@@ -406,7 +497,7 @@ export function Workbench({
           </div>
           <DataTable
             rows={list}
-            empty="Buat job order dari customer, lalu tugaskan petugas lapangan."
+            empty="Buat job order untuk order baru."
             columns={[
               {
                 title: "Job / customer",
@@ -498,10 +589,11 @@ export function Workbench({
         rows as Document[],
         (r) => `${r.filename} ${r.jobNumber} ${r.customerName}`,
       ).filter((r) => status === "all" || r.status === status);
+      visibleRows = list;
       content = (
         <DataTable
           rows={list}
-          empty="Unggah surat jalan dan bukti melalui halaman detail job yang ditugaskan."
+          empty="Unggah dokumen dari detail job."
           columns={[
             {
               title: "Dokumen",
@@ -541,6 +633,14 @@ export function Workbench({
               title: "",
               render: (r) =>
                 actions(
+                  <Button
+                    key="preview"
+                    size="sm"
+                    icon={<EyeIcon size={16} />}
+                    onClick={() => setPreview(r)}
+                  >
+                    Preview
+                  </Button>,
                   <Button
                     key="download"
                     size="sm"
@@ -591,10 +691,11 @@ export function Workbench({
               ? !r.approvedBy
               : r.blockers.length > 0),
       );
+      visibleRows = list;
       content = (
         <DataTable
           rows={list}
-          empty="Tambahkan komponen berdasarkan tarif, lalu catat persetujuannya."
+          empty="Tambahkan komponen tagihan."
           columns={[
             {
               title: "Komponen / job",
@@ -697,10 +798,11 @@ export function Workbench({
               ? r.status === "issued" && r.outstanding > 0
               : r.paymentStatus === status),
       );
+      visibleRows = list;
       content = (
         <DataTable
           rows={list}
-          empty="Buat draft dari komponen tagihan satu customer dengan ketentuan yang sama."
+          empty="Buat draft dari komponen tagihan customer."
           columns={[
             {
               title: "Invoice / customer",
@@ -752,9 +854,12 @@ export function Workbench({
               title: "",
               render: (r) =>
                 actions(
-                  <Button key="detail" size="sm" onClick={() => setView(r)}>
-                    Detail
-                  </Button>,
+                  <RecordActionButton
+                    key="detail"
+                    label="Detail"
+                    icon={EyeIcon}
+                    onClick={() => setView(r)}
+                  />,
                   can(actor, "invoicesWrite") && r.status === "draft" && (
                     <Button
                       key="issue"
@@ -783,6 +888,7 @@ export function Workbench({
         rows as Payment[],
         (r) => `${r.reference} ${r.customerName} ${r.method}`,
       );
+      visibleRows = list;
       content = (
         <DataTable
           rows={list}
@@ -816,7 +922,7 @@ export function Workbench({
               ),
             },
             {
-              title: "Unapplied credit",
+              title: "Saldo belum dialokasikan",
               render: (r) => money(r.unapplied, r.currency),
             },
             {
@@ -866,6 +972,7 @@ export function Workbench({
         rows as Quotation[],
         (r) => `${r.title} ${r.customerName} ${r.description}`,
       ).filter((r) => status === "all" || r.status === status);
+      visibleRows = list;
       content = (
         <DataTable
           rows={list}
@@ -949,6 +1056,7 @@ export function Workbench({
         rows as OrderRequest[],
         (r) => `${r.description} ${r.customerName} ${r.source}`,
       );
+      visibleRows = list;
       content = (
         <DataTable
           rows={list}
@@ -1005,6 +1113,7 @@ export function Workbench({
             ? r.active && !r.roles.length
             : r.active === (status === "active")),
       );
+      visibleRows = list;
       content = (
         <DataTable
           rows={list}
@@ -1019,11 +1128,13 @@ export function Workbench({
               ),
             },
             {
-              title: "Role",
+              title: "Peran",
+              mobile: "primary",
               render: (r) => r.roles.map((k) => roleLabels[k]).join(" · "),
             },
             {
               title: "Akun",
+              mobile: "status",
               render: (r) => (
                 <Status value={r.active ? "active" : "inactive"} />
               ),
@@ -1031,8 +1142,9 @@ export function Workbench({
             {
               title: "",
               render: (r) => (
-                <Button
-                  size="sm"
+                <RecordActionButton
+                  label="Kelola akses"
+                  icon={GearSixIcon}
                   onClick={() =>
                     open(
                       "Ubah akses pengguna",
@@ -1041,9 +1153,7 @@ export function Workbench({
                       { ...r },
                     )
                   }
-                >
-                  Kelola akses
-                </Button>
+                />
               ),
             },
           ]}
@@ -1056,14 +1166,20 @@ export function Workbench({
         rows as AuditRow[],
         (r) => `${r.actorName} ${r.entity} ${r.action} ${r.entityId}`,
       );
+      visibleRows = list;
       content = (
         <DataTable
           rows={list}
           columns={[
-            { title: "Waktu", render: (r) => dateText(r.createdAt, true) },
-            { title: "Pelaku", render: (r) => r.actorName },
+            {
+              title: "Waktu",
+              mobile: "primary",
+              render: (r) => dateText(r.createdAt, true),
+            },
+            { title: "Pelaku", mobile: "primary", render: (r) => r.actorName },
             {
               title: "Entitas",
+              mobile: "details",
               render: (r) => (
                 <div>
                   {r.entity}
@@ -1073,13 +1189,22 @@ export function Workbench({
                 </div>
               ),
             },
-            { title: "Tindakan", render: (r) => r.action.replaceAll("_", " ") },
+            {
+              title: "Tindakan",
+              mobile: "title",
+              render: (r) => r.action.replaceAll("_", " "),
+            },
             {
               title: "",
               render: (r) => (
-                <Button size="sm" onClick={() => setView(r)}>
-                  Perubahan
-                </Button>
+                <Button
+                  size="sm"
+                  shape="square"
+                  variant="ghost"
+                  aria-label="Perubahan"
+                  icon={<MagnifyingGlassIcon size={18} />}
+                  onClick={() => setView(r)}
+                />
               ),
             },
           ]}
@@ -1087,48 +1212,9 @@ export function Workbench({
       );
       break;
     }
-    case "attendance": {
-      const list = rows as Attendance[];
-      const active = list.find((r) => !r.checkOut);
-      content = (
-        <>
-          <div className="attendance-action">
-            <div>
-              <h3>
-                {active ? "Anda sedang check-in" : "Mulai hari kerja Anda"}
-              </h3>
-              <p className="text-kumo-subtle">
-                {active
-                  ? `Sejak ${dateText(active.checkIn, true)}`
-                  : "Waktu dicatat otomatis oleh server."}
-              </p>
-            </div>
-            <Button
-              variant="primary"
-              onClick={() =>
-                open(
-                  active ? "Check-out" : "Check-in",
-                  "attendance",
-                  "attendance",
-                  { kind: active ? "out" : "in" },
-                )
-              }
-            >
-              {active ? "Check-out" : "Check-in"}
-            </Button>
-          </div>
-          <DataTable
-            rows={list}
-            columns={[
-              { title: "Check-in", render: (r) => dateText(r.checkIn, true) },
-              { title: "Check-out", render: (r) => dateText(r.checkOut, true) },
-              { title: "Catatan", render: (r) => r.note || "—" },
-            ]}
-          />
-        </>
-      );
+    case "attendance":
+      content = null;
       break;
-    }
     case "dashboard":
       content =
         "currencies" in payload ? <DashboardView data={payload} /> : null;
@@ -1137,7 +1223,9 @@ export function Workbench({
   async function download(id: string) {
     setError("");
     try {
-      const response = await fetch(`/api/documents/${id}/download`);
+      const response = await fetch(`/api/documents/${id}/download`, {
+        headers: workspaceHeaders(),
+      });
       if (!response.ok) {
         const result = await response.json();
         throw new Error(result.error);
@@ -1167,7 +1255,7 @@ export function Workbench({
             from: payload.period.from,
             to: payload.period.to,
           }))
-        : (rows as Record<string, unknown>[]);
+        : (visibleRows as Record<string, unknown>[]);
     if (!exportRows.length) return;
     const keys = Object.keys(exportRows[0]).filter(
       (k) => !["customerSnapshot", "before", "after"].includes(k),
@@ -1202,34 +1290,25 @@ export function Workbench({
       <PageHeader
         title={config.title}
         template={module === "dashboard" ? "report" : "standard"}
-        description={config.description}
-        context={
-          ["jobs", "documents"].includes(module)
-            ? "Operasional"
-            : ["invoices", "payments", "billing"].includes(module)
-              ? "Keuangan"
-              : "Workspace SGI"
-        }
+
         actions={
-          <>
-            {" "}
-            <Refresh loading={loading} onClick={() => void load()} />
-            {allowCreate && config.mode && (
-              <Button
-                variant="primary"
-                icon={<PlusIcon size={16} />}
-                disabled={loading}
-                onClick={() =>
-                  open(config.action!, config.mode!, config.endpoint!)
-                }
-              >
-                {config.action}
-              </Button>
-            )}
-          </>
+          allowCreate &&
+          config.mode && (
+            <Button
+              variant="primary"
+              icon={<PlusIcon size={16} />}
+              disabled={loading}
+              onClick={() =>
+                open(config.action!, config.mode!, config.endpoint!)
+              }
+            >
+              {config.action}
+            </Button>
+          )
         }
       />
       <Feedback error={error} success={success} />
+      <DocumentPreview document={preview} onClose={() => setPreview(null)} />
       <ModuleSurface
         dashboard={module === "dashboard"}
         title={
@@ -1256,48 +1335,89 @@ export function Workbench({
                 }
               }}
             />
-            <Button
+            <ToolbarAction
               type="button"
+              aria-label="Ekspor laporan"
+              className="toolbar-icon-export"
               icon={<DownloadSimpleIcon size={16} />}
               onClick={exportData}
               disabled={loading || Boolean(error)}
             >
               Ekspor laporan
-            </Button>
+            </ToolbarAction>
           </LayerCard>
         ) : (
           module !== "attendance" && (
-            <div className="filter-bar">
-              <div className="search-input">
-                <MagnifyingGlassIcon size={17} />
-                <Input
-                  aria-label="Cari data"
-                  placeholder={`Cari ${config.title.toLowerCase()}…`}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
-              {filters && (
-                <Select<string>
-                  aria-label="Filter status"
-                  value={status}
-                  onValueChange={(v) => setStatus(v ?? "all")}
-                  items={filters}
-                />
-              )}
-              {["audit", "invoices", "payments", "billing"].includes(
-                module,
-              ) && (
-                <Button
-                  size="sm"
-                  icon={<DownloadSimpleIcon size={16} />}
-                  onClick={exportData}
-                  disabled={loading || !rows.length}
-                >
-                  Ekspor CSV
-                </Button>
-              )}
-            </div>
+            <CollectionToolbar
+              search={search}
+              onSearch={setSearch}
+              placeholder={`Cari ${config.title.toLowerCase()}…`}
+              filterActive={
+                status !== "all" || facet !== "all" || age !== "all"
+              }
+              filter={
+                <div className="collection-filter-groups">
+                  {filters && (
+                    <FilterButtons
+                      label="Status"
+                      value={status}
+                      items={filters}
+                      onChange={setStatus}
+                    />
+                  )}
+                  <FilterButtons
+                    label={facetLabel}
+                    value={facet}
+                    items={facetItems}
+                    onChange={setFacet}
+                  />
+                  {sourceRows.some((r) => r.createdAt || r.receivedAt) && (
+                    <FilterButtons
+                      label="Tanggal"
+                      value={age}
+                      items={{
+                        all: "Semua tanggal",
+                        "7": "7 hari terakhir",
+                        "30": "30 hari terakhir",
+                      }}
+                      onChange={setAge}
+                    />
+                  )}
+                </div>
+              }
+              actions={[
+                ...(["audit", "invoices", "payments", "billing"].includes(
+                  module,
+                )
+                  ? [
+                      {
+                        label: "Ekspor CSV",
+                        icon: DownloadSimpleIcon,
+                        onSelect: exportData,
+                        disabled: loading || !visibleRows.length,
+                      },
+                    ]
+                  : []),
+                ...(search.trim() ||
+                status !== "all" ||
+                facet !== "all" ||
+                age !== "all"
+                  ? [
+                      {
+                        label: "Reset pencarian dan filter",
+                        compact: true,
+                        icon: ArrowClockwiseIcon,
+                        onSelect: () => {
+                          setSearch("");
+                          setStatus("all");
+                          setFacet("all");
+                          setAge("all");
+                        },
+                      },
+                    ]
+                  : []),
+              ]}
+            />
           )
         )}
         {loading &&
@@ -1327,7 +1447,7 @@ export function Workbench({
             onSaved={() => {
               setEdit(null);
               setView(null);
-              setSuccess("Perubahan berhasil disimpan.");
+              setSuccess("Perubahan tersimpan.");
               void load();
             }}
           />
@@ -1343,15 +1463,17 @@ export function Workbench({
               ? "Detail pembayaran"
               : "Detail invoice"
         }
-        description="Catatan transaksi dan saldo dihitung dari sumber data."
       >
-        {view &&
+        {view && !latestView && (
+          <Feedback error="Record tidak lagi tersedia. Tutup panel untuk melihat daftar terbaru." />
+        )}
+        {latestView &&
           (module === "invoices" ? (
             <InvoiceView
-              invoice={view as Invoice}
+              invoice={latestView as Invoice}
               actor={actor}
               onEdit={(mode, action, initial) => {
-                const i = view as Invoice;
+                const i = latestView as Invoice;
                 setView(null);
                 open(
                   mode === "draft"
@@ -1366,9 +1488,9 @@ export function Workbench({
               }}
             />
           ) : module === "payments" ? (
-            <PaymentView payment={view as Payment} />
+            <PaymentView payment={latestView as Payment} />
           ) : (
-            <AuditView audit={view as AuditRow} />
+            <AuditView audit={latestView as AuditRow} />
           ))}
       </Modal>
     </>
@@ -1387,7 +1509,7 @@ function ModuleSurface({
 }) {
   if (dashboard) return <>{children}</>;
   return (
-    <CollectionPanel title={title} count={count}>
+    <CollectionPanel title={title} count={count} showHeading={false}>
       {children}
     </CollectionPanel>
   );

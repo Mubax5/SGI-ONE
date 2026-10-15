@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import { WorkspaceLink as Link } from "./workspace-link";
 import { Badge, LinkButton, Text } from "@cloudflare/kumo";
 import {
   FilesIcon,
@@ -17,7 +17,7 @@ export function DashboardView({ data: d }: { data: Dashboard }) {
       <SectionPanel
         id="penagihan"
         title="Penagihan & piutang"
-        description="Penagihan dan penerimaan mengikuti periode laporan. Saldo piutang dan credit menunjukkan posisi sekarang."
+        description="Piutang: saldo saat ini."
         action={
           <span className="text-kumo-subtle">
             {d.draftCount} draft tidak termasuk penagihan
@@ -26,6 +26,7 @@ export function DashboardView({ data: d }: { data: Dashboard }) {
         className="financial-summary"
       >
         <DataTable
+          mobile="table"
           rows={d.currencies
             .filter(
               (c) =>
@@ -57,7 +58,7 @@ export function DashboardView({ data: d }: { data: Dashboard }) {
               render: (r) => formatMoney(r.overdue, r.currency),
             },
             {
-              title: "Credit belum dialokasi",
+              title: "Saldo belum dialokasikan",
               render: (r) => formatMoney(r.unapplied, r.currency),
             },
           ]}
@@ -67,7 +68,7 @@ export function DashboardView({ data: d }: { data: Dashboard }) {
         <SectionPanel
           id="prioritas"
           title="Prioritas operasional"
-          description={`Pekerjaan terbuka diurutkan berdasarkan tenggat. ${d.rejectedDocuments} dokumen perlu perbaikan.`}
+          description={`${d.rejectedDocuments} dokumen perlu perbaikan`}
           action={
             <LinkButton
               variant="ghost"
@@ -83,7 +84,7 @@ export function DashboardView({ data: d }: { data: Dashboard }) {
           <DataTable
             rows={d.attention}
             perPage={5}
-            empty="Seluruh pekerjaan sudah ditutup. Buat job baru untuk order berikutnya."
+            empty="Belum ada pekerjaan aktif. Operations dapat membuat job untuk order baru."
             columns={[
               {
                 title: "Job / customer",
@@ -109,11 +110,7 @@ export function DashboardView({ data: d }: { data: Dashboard }) {
             ]}
           />
         </SectionPanel>
-        <SectionPanel
-          title="Tindak lanjut"
-          description="Kesiapan pekerjaan dan tagihan saat ini."
-          className="operations-summary"
-        >
+        <SectionPanel title="Tindak lanjut" className="operations-summary">
           <RecordFacts
             items={[
               { label: "Pekerjaan aktif", value: d.activeJobs },
@@ -157,7 +154,6 @@ export function DashboardView({ data: d }: { data: Dashboard }) {
       <SectionPanel
         id="piutang"
         title="Piutang pelanggan"
-        description="Saldo invoice terbit setelah alokasi pembayaran dan koreksi sah."
         action={
           <LinkButton
             variant="ghost"

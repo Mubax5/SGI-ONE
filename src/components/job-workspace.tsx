@@ -1,8 +1,7 @@
 "use client";
-import Link from "next/link";
+import { WorkspaceLink as Link } from "./workspace-link";
 import { Button, LayerCard, Tabs } from "@cloudflare/kumo";
 import {
-  ArrowLeftIcon,
   PlusIcon,
   UploadSimpleIcon,
   DownloadSimpleIcon,
@@ -30,14 +29,18 @@ import {
   dateText,
   Feedback,
   Modal,
-  Refresh,
   Status,
   SectionPanel,
 } from "./shared";
+import { ActionMenu } from "./action-menu";
+import { DocumentPreview } from "./document-preview";
+import { RowActions } from "./row-actions";
 import { Editor, EditorMode } from "./editor";
 import { LoadingState, PageHeader, RecordFacts } from "./workspace-ui";
 import type { FormDataSources, JobDetail } from "./types";
+import { useLiveRevision, workspaceHeaders } from "@/lib/live-data";
 export function JobWorkspace({ id, actor }: { id: string; actor: Actor }) {
+  const liveRevision = useLiveRevision();
   const [job, setJob] = useState<JobDetail>();
   const mayWork = Boolean(
     actor.roles.includes("operations") ||
@@ -47,6 +50,10 @@ export function JobWorkspace({ id, actor }: { id: string; actor: Actor }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [preview, setPreview] = useState<{
+    id: string;
+    filename: string;
+  } | null>(null);
   const [tab, setTab] = useState("documents");
   const [edit, setEdit] = useState<{
     title: string;
@@ -95,16 +102,29 @@ export function JobWorkspace({ id, actor }: { id: string; actor: Actor }) {
     return () => {
       active = false;
     };
-  }, [id, actor]);
+  }, [id, actor, liveRevision]);
+  useEffect(() => {
+    if (job)
+      window.dispatchEvent(
+        new CustomEvent("sgi-breadcrumb", {
+          detail: { path: window.location.pathname, title: job.number },
+        }),
+      );
+  }, [job]);
   const open = (
     title: string,
     mode: EditorMode,
     endpoint: string,
     initial?: Record<string, unknown>,
-  ) => setEdit({ title, mode, endpoint, initial });
+  ) => {
+    setSuccess("");
+    setEdit({ title, mode, endpoint, initial });
+  };
   async function download(docId: string, filename: string) {
     try {
-      const response = await fetch(`/api/documents/${docId}/download`);
+      const response = await fetch(`/api/documents/${docId}/download`, {
+        headers: workspaceHeaders(),
+      });
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.error);
@@ -121,10 +141,6 @@ export function JobWorkspace({ id, actor }: { id: string; actor: Actor }) {
   }
   return (
     <>
-      <Link href="/jobs" className="back-link">
-        <ArrowLeftIcon size={16} />
-        Kembali ke job order
-      </Link>
       <Feedback error={error} success={success} />
       {!job ? (
         <div className="empty" role="status">
@@ -143,34 +159,37 @@ export function JobWorkspace({ id, actor }: { id: string; actor: Actor }) {
             description={`${job.customer.name} · ${job.description}`}
             actions={
               <>
-                {" "}
-                <Refresh loading={loading} onClick={() => void load()} />
-                {can(actor, "jobsWrite") && job.status === "draft" && (
-                  <Button
-                    onClick={() =>
-                      open("Ubah job order", "job", `jobs/${id}`, { ...job })
-                    }
-                  >
-                    Ubah detail
-                  </Button>
-                )}
-                {can(actor, "jobsWrite") &&
-                  !["completed", "cancelled"].includes(job.status) && (
-                    <Button
-                      onClick={() =>
-                        open(
-                          "Penugasan petugas",
-                          "assign",
-                          `jobs/${id}/assign`,
+                <ActionMenu
+                  label="Tindakan job"
+                  actions={[
+                    ...(can(actor, "jobsWrite") && job.status === "draft"
+                      ? [
                           {
-                            assignees: job.assignees,
+                            label: "Ubah detail",
+                            onSelect: () =>
+                              open("Ubah job order", "job", `jobs/${id}`, {
+                                ...job,
+                              }),
                           },
-                        )
-                      }
-                    >
-                      Atur penugasan
-                    </Button>
-                  )}
+                        ]
+                      : []),
+                    ...(can(actor, "jobsWrite") &&
+                    !["completed", "cancelled"].includes(job.status)
+                      ? [
+                          {
+                            label: "Atur penugasan",
+                            onSelect: () =>
+                              open(
+                                "Penugasan petugas",
+                                "assign",
+                                `jobs/${id}/assign`,
+                                { assignees: job.assignees },
+                              ),
+                          },
+                        ]
+                      : []),
+                  ]}
+                />
                 {can(actor, "jobsProgress") &&
                   mayWork &&
                   transitions[job.status].length > 0 && (
@@ -311,7 +330,6 @@ export function JobWorkspace({ id, actor }: { id: string; actor: Actor }) {
               <>
                 <SectionPanel
                   title="Bukti pekerjaan"
-                  description="Checklist layanan dan versi dokumen terbaru menentukan kesiapan penagihan."
                   action={
                     can(actor, "documentsUpload") &&
                     mayWork &&
@@ -357,7 +375,7 @@ export function JobWorkspace({ id, actor }: { id: string; actor: Actor }) {
                   </div>
                   <DataTable
                     rows={job.documents}
-                    empty="Unggah bukti sesuai checklist layanan. Bukti hanya dianggap sah setelah review Operations."
+                    empty="Unggah dokumen yang diperlukan untuk pekerjaan ini."
                     columns={[
                       {
                         title: "Dokumen",
@@ -393,7 +411,10 @@ export function JobWorkspace({ id, actor }: { id: string; actor: Actor }) {
                       {
                         title: "",
                         render: (r) => (
-                          <div className="row-actions">
+                          <RowActions>
+                            <Button size="sm" onClick={() => setPreview(r)}>
+                              Preview
+                            </Button>
                             <Button
                               size="sm"
                               icon={<DownloadSimpleIcon size={16} />}
@@ -421,7 +442,7 @@ export function JobWorkspace({ id, actor }: { id: string; actor: Actor }) {
                                   Review
                                 </Button>
                               )}
-                          </div>
+                          </RowActions>
                         ),
                       },
                     ]}
@@ -433,7 +454,6 @@ export function JobWorkspace({ id, actor }: { id: string; actor: Actor }) {
               <>
                 <SectionPanel
                   title="Surat jalan digital"
-                  description="Formulir serah terima. Unggah bukti bertanda tangan pada tab dokumen untuk verifikasi."
                   action={
                     can(actor, "documentsUpload") &&
                     mayWork &&
@@ -496,7 +516,6 @@ export function JobWorkspace({ id, actor }: { id: string; actor: Actor }) {
               <>
                 <SectionPanel
                   title="Catatan pekerjaan"
-                  description="Perubahan status dan laporan lapangan tersimpan dengan nama pelaku."
                   action={
                     can(actor, "jobsProgress") &&
                     mayWork &&
@@ -535,7 +554,6 @@ export function JobWorkspace({ id, actor }: { id: string; actor: Actor }) {
               <>
                 <SectionPanel
                   title="Komponen tagihan pekerjaan"
-                  description="Persetujuan tarif dan checklist bukti diperiksa kembali saat invoice diterbitkan."
                   action={
                     <Link className="record-link" href="/billing">
                       Kelola komponen →
@@ -571,7 +589,6 @@ export function JobWorkspace({ id, actor }: { id: string; actor: Actor }) {
         open={edit !== null}
         onClose={() => setEdit(null)}
         title={edit?.title ?? "Ubah pekerjaan"}
-        description="Data divalidasi sesuai penugasan dan aturan workflow."
       >
         {edit && (
           <Editor
@@ -583,12 +600,13 @@ export function JobWorkspace({ id, actor }: { id: string; actor: Actor }) {
             onCancel={() => setEdit(null)}
             onSaved={() => {
               setEdit(null);
-              setSuccess("Perubahan pekerjaan berhasil disimpan.");
+              setSuccess("Perubahan tersimpan.");
               void load();
             }}
           />
         )}
       </Modal>
+      <DocumentPreview document={preview} onClose={() => setPreview(null)} />
     </>
   );
 }

@@ -2,7 +2,6 @@
 import { Badge, LayerCard, Loader, Text } from "@cloudflare/kumo";
 import { ReactNode } from "react";
 export function PageHeader({
-  title,
   description,
   context,
   template = "standard",
@@ -16,6 +15,7 @@ export function PageHeader({
   status?: ReactNode;
   actions?: ReactNode;
 }) {
+  if (!description && !context && !status && !actions) return null;
   return (
     <header className="page-heading" data-template={template}>
       <div className="page-title-group">
@@ -24,12 +24,7 @@ export function PageHeader({
             {context}
           </Text>
         )}
-        <div className="page-title-line">
-          <Text as="h1" variant="heading" size="lg">
-            {title}
-          </Text>
-          {status}
-        </div>
+        {status && <div className="page-title-line">{status}</div>}
         {description && <Text variant="secondary">{description}</Text>}
       </div>
       {actions && <div className="page-actions">{actions}</div>}
@@ -40,30 +35,34 @@ export function CollectionPanel({
   title,
   description,
   count,
+  showHeading = true,
   toolbar,
   children,
 }: {
   title: string;
   description?: string;
   count?: number;
+  showHeading?: boolean;
   toolbar?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <LayerCard className="module-panel">
-      <LayerCard.Secondary className="collection-heading">
-        <div className="collection-title">
-          <Text as="h2" variant="heading">
-            {title}
-          </Text>
-          {count !== undefined && (
-            <Badge className="sgi-badge" variant="secondary">
-              {count}
-            </Badge>
-          )}
-        </div>
-        {description && <Text variant="secondary">{description}</Text>}
-      </LayerCard.Secondary>
+      {showHeading && (
+        <LayerCard.Secondary className="collection-heading">
+          <div className="collection-title">
+            <Text as="h2" variant="heading">
+              {title}
+            </Text>
+            {count !== undefined && (
+              <Badge className="sgi-badge" variant="secondary">
+                {count}
+              </Badge>
+            )}
+          </div>
+          {description && <Text variant="secondary">{description}</Text>}
+        </LayerCard.Secondary>
+      )}
       <LayerCard.Primary className="module-panel-body">
         {toolbar && <div className="collection-toolbar">{toolbar}</div>}
         {children}

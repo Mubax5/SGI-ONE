@@ -20,7 +20,8 @@ import {
   MapTrifoldIcon,
   ChartBarIcon,
 } from "@phosphor-icons/react";
-import type { Permission } from "@/lib/domain";
+import { can, type Actor, type Permission, type Role } from "@/lib/domain";
+import { analyticsRoles } from "@/lib/workspace";
 export const navigation: {
   href: string;
   label: string;
@@ -28,10 +29,11 @@ export const navigation: {
   icon: typeof TruckIcon;
   permission?: Permission;
   group: string;
+  roles?: Role[];
 }[] = [
   {
     href: "/home",
-    label: "Homepage",
+    label: "Dashboard",
     shortLabel: "Beranda",
     icon: HouseIcon,
     permission: "dashboard",
@@ -39,6 +41,7 @@ export const navigation: {
   },
   {
     href: "/analytics",
+    roles: analyticsRoles,
     label: "Analitik",
     shortLabel: "Analitik",
     icon: ChartPieIcon,
@@ -127,6 +130,7 @@ export const navigation: {
   },
   {
     href: "/attendance",
+    permission: "attendanceSelf",
     label: "Absensi saya",
     shortLabel: "Absen",
     icon: ClockIcon,
@@ -149,6 +153,23 @@ export const navigation: {
     group: "Administrasi",
   },
 ];
+navigation.push({
+  href: "/system",
+  label: "Administrasi sistem",
+  shortLabel: "Sistem",
+  icon: GearSixIcon,
+  permission: "users",
+  roles: ["admin"],
+  group: "Administrasi",
+});
+export function workspaceNavigation(actor: Actor, role: Role) {
+  const scoped = { ...actor, roles: [role] };
+  return navigation.filter(
+    (item) =>
+      (!item.roles || item.roles.includes(role)) &&
+      (!item.permission || can(scoped, item.permission)),
+  );
+}
 export const navigationGroups = [
   { label: "Pemantauan", icon: ChartBarIcon },
   { label: "Operasional", icon: StackIcon },

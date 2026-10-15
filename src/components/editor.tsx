@@ -37,8 +37,7 @@ export type EditorMode =
   | "correction"
   | "user"
   | "roles"
-  | "delivery"
-  | "attendance";
+  | "delivery";
 type Field = {
   key: string;
   label: string;
@@ -58,8 +57,7 @@ const termsFields: Field[] = [
     key: "taxBps",
     label: "Pajak (basis points)",
     type: "number",
-    description:
-      "0 = tanpa pajak; 100 = 1%. Tarif harus sesuai persetujuan Finance.",
+    description: "100 = 1%; 0 = tanpa pajak.",
   },
   { key: "termsDays", label: "Jatuh tempo (hari)", type: "number" },
 ];
@@ -102,8 +100,7 @@ export function Editor({
       method: "bank_transfer",
       active: "true",
       quantity: "1",
-      kind:
-        mode === "attendance" ? String(initial.kind ?? "in") : "credit_note",
+      kind: "credit_note",
       type: "delivery_note",
       status: "in_progress",
     };
@@ -258,8 +255,7 @@ export function Editor({
         {
           key: "amount",
           label: "Nilai penawaran",
-          description:
-            "Nominal dalam mata uang utama, contoh 2500000 atau 125.50.",
+          description: "Contoh: 2500000 atau 125.50.",
         },
         ...termsFields,
       ];
@@ -382,7 +378,7 @@ export function Editor({
         { key: "email", label: "Email internal", type: "email" },
         {
           key: "password",
-          label: "Kata sandi awal (minimal 12 karakter)",
+          label: "Kata sandi awal (minimal 8 karakter)",
           type: "password",
         },
       ];
@@ -411,16 +407,6 @@ export function Editor({
           key: "note",
           type: "textarea",
           label: "Catatan kondisi barang",
-          optional: true,
-        },
-      ];
-      break;
-    case "attendance":
-      fields = [
-        {
-          key: "note",
-          type: "textarea",
-          label: "Catatan absensi",
           optional: true,
         },
       ];
@@ -663,15 +649,14 @@ export function Editor({
       {mode === "upload" && (
         <div className="upload-field">
           <Input
-            label="File dokumen privat"
+            label="File dokumen"
             type="file"
-            accept="application/pdf,image/jpeg,image/png"
+            accept="application/pdf,image/jpeg,image/png,image/webp"
             required
             onChange={(e) => setFile(e.target.files?.[0])}
           />
           <p>
-            PDF, JPG, atau PNG · maksimal 10 MB. Versi lama tetap tersimpan;
-            unggahan baru menunggu review Operations.
+            PDF, JPG, PNG, WebP · maksimal 10 MB. Menunggu review Operations.
           </p>
         </div>
       )}
@@ -684,8 +669,8 @@ export function Editor({
           </h3>
           <p className="text-kumo-subtle">
             {mode === "draft"
-              ? "Draft boleh disiapkan sebelum pekerjaan selesai. Penerbitan tetap memerlukan persetujuan dan bukti."
-              : "Saldo penerimaan yang belum dialokasikan tersimpan sebagai unapplied credit."}
+              ? "Untuk menerbitkan invoice, lengkapi persetujuan dan dokumen."
+              : "Sisa pembayaran dapat dialokasikan nanti."}
           </p>
           {lineRows.length ? (
             lineRows.map((row) => {
