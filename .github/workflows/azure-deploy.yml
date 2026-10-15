@@ -51,9 +51,9 @@ jobs:
           name: sgi-one-azure
       - uses: azure/login@v2
         with:
-          client-id: ${{ vars.AZURE_CLIENT_ID }}
-          tenant-id: ${{ vars.AZURE_TENANT_ID }}
-          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_3AB73D28A39F4A77898B4DAC791A7B17 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_D8167A91FE294B1BBB13DC718E9959A2 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_38683B04737047468346665A1718D71D }}
       - uses: azure/webapps-deploy@v3
         id: publish
         with:
