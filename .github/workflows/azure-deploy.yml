@@ -59,13 +59,14 @@ jobs:
         with:
           app-name: sgi-one-pipel7eres
           package: sgi-one.zip
+          type: zip
           startup-command: node start-azure.mjs
       - name: Verify application and database readiness
         env:
           SITE_URL: ${{ steps.publish.outputs.webapp-url }}
         run: |
           for attempt in $(seq 1 36); do
-            if curl --fail --silent --show-error --max-time 15 "$SITE_URL/api/health"; then
+            if curl --location --fail --silent --show-error --max-time 15 "$SITE_URL/api/health"; then
               exit 0
             fi
             sleep 10

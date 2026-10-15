@@ -118,6 +118,8 @@ Verifikasi lokasi/peta: 45 unit test dan lima skenario Playwright mencakup debou
 
 ## Deployment Azure App Service
 
+Alamat aplikasi: [SGI One Azure](https://sgi-one-pipel7eres-fgg9hkgyd6e7gvdb.indonesiacentral-01.azurewebsites.net). Resource group `rg-sgi-one-prod`, web app `sgi-one-pipel7eres`, PostgreSQL `sgi-one-pipel7eres-pg`, region Indonesia Central. Workflow: `.github/workflows/azure-deploy.yml`, dipicu setiap push ke `main`.
+
 Runtime Node.js 24 pada Linux App Service menggunakan output Next.js standalone. PostgreSQL berada pada Azure Database for PostgreSQL; dokumen tetap memakai bucket Cloudflare R2 privat.
 
 ```powershell
@@ -130,11 +132,11 @@ npm run package:azure
 
 Paket aplikasi ada di `artifacts/azure/app`. Paket menyertakan aset publik, migration dan bootstrap database, serta mengecualikan seluruh `.env*`. Build untuk Azure harus dijalankan pada Linux agar dependency native sesuai runtime.
 
-Atur startup command App Service ke `node start-azure.mjs`, matikan build saat deployment (`SCM_DO_BUILD_DURING_DEPLOYMENT=false`), dan gunakan `/api/health` sebagai health check. Migration berjalan sebelum server mulai dan dilindungi advisory lock PostgreSQL. Seed hanya berjalan jika `DEMO_SEED_ENABLED=true`; akun yang sudah ada tidak direset pada restart atau deployment berikutnya.
+Atur startup command App Service ke `node start-azure.mjs`, matikan build saat deployment (`SCM_DO_BUILD_DURING_DEPLOYMENT=false`), aktifkan `WEBSITE_RUN_FROM_PACKAGE=1`, dan gunakan `/api/health` sebagai health check. ZIP hasil build dijalankan langsung agar Azure tidak mengemas ulang dependency. Migration berjalan sebelum server mulai dan dilindungi advisory lock PostgreSQL. Seed hanya berjalan jika `DEMO_SEED_ENABLED=true`; akun yang sudah ada tidak direset pada restart atau deployment berikutnya.
 
 Application settings wajib: `DATABASE_URL` dengan TLS (`sslmode=verify-full`), `BETTER_AUTH_URL` berisi origin HTTPS Azure, `BETTER_AUTH_SECRET` acak minimal 32 karakter, dan seluruh konfigurasi R2 pada `.env.example`. Simpan secret hanya dalam Application settings, bukan Git atau workflow. Tambahkan `DEMO_PASSWORD` dan `DEMO_SEED_ENABLED=true` untuk inisialisasi akun simulasi, lalu nonaktifkan seed setelah deployment pertama.
 
-Deployment otomatis menggunakan GitHub Actions pada push ke `main`, OIDC Azure, dan paket hasil build. Batasi federated credential ke repository/branch tersebut dan izin deployment ke aplikasi SGI. Akses firewall PostgreSQL dibatasi ke outbound IP App Service. Lingkungan pengembangan tetap menggunakan Docker Compose lokal.
+Deployment otomatis menggunakan GitHub Actions pada push ke `main`, OIDC Azure, dan paket hasil build. Batasi federated credential ke repository/branch tersebut dan izin deployment ke aplikasi SGI. Akses firewall PostgreSQL dibatasi ke outbound IP App Service. Perbarui aturan IP jika plan atau region aplikasi berubah. Jangan aktifkan akses dari semua IP atau seluruh layanan Azure. Lingkungan pengembangan tetap menggunakan Docker Compose lokal.
 
 ## Publikasi Sites sebelumnya
 
