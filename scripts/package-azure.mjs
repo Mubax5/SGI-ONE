@@ -11,8 +11,15 @@ await rm(destination, { recursive: true, force: true });
 await mkdir(destination, { recursive: true });
 await cp(resolve(workspace, ".next/standalone"), destination, {
   recursive: true,
+  dereference: true,
   filter: (source) => !/^\.env(?:\.|$)/.test(basename(source)),
 });
+// Native image libraries include shared binaries that Next's file tracing can omit.
+await cp(
+  resolve(workspace, "node_modules/@img"),
+  resolve(destination, "node_modules/@img"),
+  { recursive: true, dereference: true },
+);
 for (const [source, target] of [
   [".next/static", ".next/static"],
   ["public", "public"],
